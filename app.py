@@ -10,7 +10,8 @@ API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI") 
 
 # MongoDB Setup
-client = MongoClient(MONGO_URI)
+client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=5000)
+
 db = client['neer_database']
 chat_col = db['history']
 knowledge_col = db['permanent_memory']
