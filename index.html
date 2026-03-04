@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="manifest" href="/static/manifest.json">
+    <title>NEER</title>
+    <style>
+        body { background: #000; color: #fff; font-family: sans-serif; padding: 20px; }
+        .header { font-weight: bold; font-size: 24px; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        .status { font-size: 14px; color: #aaa; margin-top: 5px; }
+        #chat-box { height: 70vh; overflow-y: auto; margin-top: 20px; border-bottom: 1px solid #333; }
+        .user { color: #0f0; }
+        .neer { color: #0cf; }
+        input { width: 80%; padding: 10px; background: #222; border: none; color: #fff; }
+        button { padding: 10px; background: #0f0; border: none; }
+    </style>
+</head>
+<body>
+    <div class="header">N E E R</div>
+    <div class="status">online</div>
+    <div id="chat-box"></div>
+    <div id="typing" style="display:none; color:#555">typing...</div>
+    <input type="text" id="userInput" placeholder="Kuch bol bhai...">
+    <button onclick="sendMsg()">Send</button>
+
+    <script>
+        async function sendMsg() {
+            let input = document.getElementById("userInput");
+            let box = document.getElementById("chat-box");
+            let typing = document.getElementById("typing");
+            
+            box.innerHTML += `<p class="user"><b>You:</b> ${input.value}</p>`;
+            typing.style.display = "block";
+            
+            let response = await fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: input.value})
+            });
+            
+            let data = await response.json();
+            typing.style.display = "none";
+            box.innerHTML += `<p class="neer"><b>Neer:</b> ${data.reply}</p>`;
+            input.value = "";
+            box.scrollTop = box.scrollHeight;
+        }
+    </script>
+</body>
+</html>
