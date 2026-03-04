@@ -1,16 +1,19 @@
+import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
-import requests, json, os, re
+from pymongo import MongoClient
 from datetime import datetime
 
 app = Flask(__name__)
 
+# --- Environment Variables (Security) ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
-MEMORY_FILE = "neer_chat.json"
+MONGO_URI = os.getenv("MONGO_URI") 
 
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r") as f: return json.load(f)
-    return [{"role": "system", "content": "Tera naam Neer hai. Tu 2026 mein reh raha ek desi dost hai. Hinglish bol."}]
+# MongoDB Setup
+client = MongoClient(MONGO_URI)
+db = client['neer_database']
+chat_col = db['history']
+knowledge_col = db['permanent_memory']
 
 @app.route('/')
 def index():
@@ -19,12 +22,23 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    chat_history = load_memory()
     
+    # 1. MongoDB se purani chat uthao
+    history = list(chat_col.find().sort("_id", -1).limit(10))
+    history.reverse()
+    formatted_history = [{"role": m['role'], "content": m['content']} for m in history]
+    
+    # 2. Permanent Knowledge uthao
+    p_mem = list(knowledge_col.find())
+    knowledge_str = str([m['info'] for m in p_mem])
+
     now = datetime.now()
-    system_instruction = {"role": "system", "content": f"Date: {now.strftime('%d %b %Y')}. Year: 2026. Be a natural friend."}
+    system_instr = {
+        "role": "system", 
+        "content": f"Tu Neer hai, desi dost. Year 2026. Memory: {knowledge_str}. Use Hinglish."
+    }
     
-    payload = [system_instruction] + chat_history + [{"role": "user", "content": user_input}]
+    payload = [system_instr] + formatted_history + [{"role": "user", "content": user_input}]
     
     response = requests.post(
         url="https://openrouter.ai/api/v1/chat/completions",
@@ -35,12 +49,16 @@ def chat():
     reply = response.json()['choices'][0]['message']['content']
     reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-    chat_history.append({"role": "user", "content": user_input})
-    chat_history.append({"role": "assistant", "content": reply})
+    # 3. MongoDB mein Save karo (Memory Evolve)
+    chat_col.insert_one({"role": "user", "content": user_input, "time": now})
+    chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
     
-    with open(MEMORY_FILE, "w") as f: json.dump(chat_history[-15:], f)
-    
+    # Auto-learning logic
+    if "yaad rakh" in user_input.lower():
+        knowledge_col.insert_one({"info": user_input, "date": now})
+
     return jsonify({"reply": reply})
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(host='0.0.0.0', port=5000)
+    
