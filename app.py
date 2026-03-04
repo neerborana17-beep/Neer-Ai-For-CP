@@ -4,7 +4,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-API_KEY = "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"
+API_KEY = os.getenv("OPENROUTER_API_KEY")
 MEMORY_FILE = "neer_chat.json"
 
 def load_memory():
