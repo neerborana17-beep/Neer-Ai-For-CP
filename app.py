@@ -1,5 +1,4 @@
 import os, requests, json, re
-import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
@@ -78,4 +77,4 @@ def chat():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-            
+    
