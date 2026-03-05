@@ -5,11 +5,11 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Configuration ---
+# --- Fast Config ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# MongoDB with super fast timeout
+# MongoDB with 1.5s Fast Timeout
 try:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
     db = client['neer_db']
@@ -25,21 +25,23 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bol! 😂"})
+    if not user_input: return jsonify({"reply": "Bol na bhai! 😂"})
 
-    # Personality Context
+    # --- Smart Context & Personality ---
+    # AI ko bataya gaya hai ki wo sirf important baaton par focus kare
     system_instr = (
-        "Tera naam Neer hai. Tu CP ka pakka desi yaar hai. "
-        "Short, fast aur natural Hinglish mein reply kar. "
-        "Pichhli baaton ka dhayan rakh par bhashan mat de."
+        "Tera naam Neer hai, CP ka yaar. "
+        "Strict Rule: Sirf 2-3 lines mein desi Hinglish reply kar. "
+        "User ki hobbies, naam aur important baatein yaad rakh, baaki ignore kar. "
+        "Baar-baar 2026 ya AI hone ka bhashan mat de. Be natural."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # Fast History (Only last 5 for speed)
+    # --- Memory Fetching (Optimized to last 4 for speed) ---
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(5))
+            history = list(chat_col.find().sort("time", -1).limit(4))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -48,24 +50,25 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # Switching to Flash-Lite for 2x Speed
+        # Using Gemini 2.0 Flash Lite for < 4s response
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-lite-001", # Fastest Model
+                "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 150 # Limit tokens for faster response
+                "temperature": 0.8,
+                "max_tokens": 120 
             }),
-            timeout=8 # Timeout tight rakha hai speed ke liye
+            timeout=8
         )
         
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # Save to DB in background style
-        if mongo_status:
+        # --- Smart Saving Logic ---
+        # Sirf tab save karega jab message 4 words se bada ho (Faltu "Hi/Bye" ignore karne ke liye)
+        if mongo_status and len(user_input.split()) > 3:
             try:
                 chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now()})
                 chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now()})
@@ -73,7 +76,7 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Bhai, net slow hai ya mera dimaag, fir se bol! 😂"})
+        return jsonify({"reply": "Network hichki le raha hai, phir se bol! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
