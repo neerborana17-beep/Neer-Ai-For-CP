@@ -1,17 +1,18 @@
 import os, requests, json, re
+import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
 
 app = Flask(__name__)
 
+# --- Configuration ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# --- Optimized MongoDB Connection ---
+# MongoDB with super fast timeout
 try:
-    # Timeout kam rakha hai taaki speed bani rahe
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
     db = client['neer_db']
     chat_col = db['history']
     mongo_status = True
@@ -25,28 +26,22 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bol bhai! 😂"})
+    if not user_input: return jsonify({"reply": "Kuch toh bol! 😂"})
 
-    now = datetime.now()
-    current_time = now.strftime("%I:%M %p")
-
-    # 1. Neer ka Asli Dimaag (Instruction upgrade)
+    # Personality Context
     system_instr = (
-        "Tera naam Neer hai. Tu CP ka pakka yaar hai. "
-        "Tujhe hamesha pichhli chat yaad rakhni hai. Agar user 'Wo kaise?' ya 'Kyun?' puche, "
-        "toh tu pichhle message ka reference lekar jawab dega. "
-        "Boring bhashan mat de, short aur natural Hinglish mein baat kar. "
-        "Baar-baar 2026 ya dost hone ka dhindora mat peet."
+        "Tera naam Neer hai. Tu CP ka pakka desi yaar hai. "
+        "Short, fast aur natural Hinglish mein reply kar. "
+        "Pichhli baaton ka dhayan rakh par bhashan mat de."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # 2. Perfect Memory Logic (Pichhle 10 messages ka flow)
+    # Fast History (Only last 5 for speed)
     if mongo_status:
         try:
-            # Time ke hisaab se last 10 messages uthao
-            history = list(chat_col.find().sort("time", -1).limit(10))
-            history.reverse() # Inhe sahi order (purane se naye) mein lagao
+            history = list(chat_col.find().sort("time", -1).limit(5))
+            history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
         except: pass
@@ -54,34 +49,33 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # Switching to Flash-Lite for 2x Speed
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-001",
+                "model": "google/gemini-2.0-flash-lite-001", # Fastest Model
                 "messages": messages,
-                "temperature": 0.7, # Accuracy ke liye temperature thoda kam kiya
-                "max_tokens": 250
+                "temperature": 0.7,
+                "max_tokens": 150 # Limit tokens for faster response
             }),
-            timeout=15
+            timeout=8 # Timeout tight rakha hai speed ke liye
         )
         
-        res_data = response.json()
-        reply = res_data['choices'][0]['message']['content']
+        reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # 3. Save to Database (With Timestamp)
+        # Save to DB in background style
         if mongo_status:
             try:
-                # User ka message aur AI ka reply save karo
                 chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now()})
                 chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now()})
             except: pass
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Bhai, dimag hang ho gaya, fir se pucho! 😂"})
+        return jsonify({"reply": "Bhai, net slow hai ya mera dimaag, fir se bol! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-    
+            
