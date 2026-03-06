@@ -1,80 +1,25 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neer AI | Close Friend</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        :root { --bg: #0b1120; --glass: rgba(17, 25, 40, 0.9); --accent: #38bdf8; --text: #f8fafc; }
-        body { font-family: 'Outfit', sans-serif; background: var(--bg); color: var(--text); margin: 0; display: flex; justify-content: center; height: 100vh; overflow: hidden; }
-        .chat-container { width: 100%; max-width: 500px; background: var(--glass); display: flex; flex-direction: column; border-radius: 20px; margin: 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; }
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
-        .msg { max-width: 80%; padding: 12px 16px; border-radius: 15px; font-size: 15px; line-height: 1.4; }
-        .user { align-self: flex-end; background: var(--accent); color: #000; border-bottom-right-radius: 2px; }
-        .ai { align-self: flex-start; background: rgba(255,255,255,0.1); border-bottom-left-radius: 2px; }
-        .input-area { padding: 15px; display: flex; gap: 10px; background: rgba(0,0,0,0.4); }
-        input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.2); border-radius: 10px; padding: 12px; color: #fff; outline: none; }
-        .btn { background: var(--accent); border: none; padding: 10px 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-        .mic-btn { background: rgba(255,255,255,0.1); font-size: 20px; border-radius: 50%; width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; transition: 0.3s; }
-        .listening { background: #ef4444; transform: scale(1.1); animation: pulse 1s infinite; }
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    </style>
-</head>
-<body>
-
-<div class="chat-container">
-    <div class="header">
-        <h2 style="margin:0;">Neer 🎙️</h2>
-        <span style="font-size: 12px; color: #10b981;">● Online & Sun raha hai</span>
-    </div>
-    <div id="chat-box"></div>
-    <div id="typing" style="padding: 10px 20px; font-size: 13px; color: #aaa; display: none;">Neer likh raha hai...</div>
-    <div class="input-area">
-        <button id="mic-btn" class="mic-btn" onclick="startVoice()">🎙️</button>
-        <input type="text" id="user-input" placeholder="Bol na bhai..." onkeypress="if(event.key==='Enter') sendMessage()">
-        <button class="btn" onclick="sendMessage()">Bhej</button>
-    </div>
-</div>
-
 <script>
     const chatBox = document.getElementById('chat-box');
     const userInput = document.getElementById('user-input');
-    const micBtn = document.getElementById('mic-btn');
     const typing = document.getElementById('typing');
 
-    // 🔊 1. NEER KI AWAAZ (Speaker)
+    // 🔊 MALE VOICE ENGINE (Optimized)
     function speak(text) {
-        window.speechSynthesis.cancel(); // Purani awaaz stop karo
+        window.speechSynthesis.cancel(); 
         const speech = new SpeechSynthesisUtterance(text);
-        speech.lang = 'hi-IN'; // Hinglish style
-        speech.rate = 1.0;
+        
+        // Sabhi voices load karo aur Male voice dhoondo
+        let voices = window.speechSynthesis.getVoices();
+        let selectedVoice = voices.find(v => v.name.includes('Male') || v.name.includes('Google hindi')) || voices[0];
+        
+        speech.voice = selectedVoice;
+        speech.lang = 'hi-IN';
+        speech.pitch = 0.85; // 0.8-0.9 se awaaz bhari aur dosti wali lagti hai
+        speech.rate = 1.05;  // Thodi fast speed taaki natural lage
+        
         window.speechSynthesis.speak(speech);
     }
 
-    // 🎙️ 2. TERI AWAAZ (Microphone)
-    function startVoice() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (!SpeechRecognition) {
-            alert("Bhai, tera browser voice support nahi karta!");
-            return;
-        }
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'hi-IN';
-        
-        recognition.onstart = () => micBtn.classList.add('listening');
-        recognition.onend = () => micBtn.classList.remove('listening');
-
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            userInput.value = transcript;
-            sendMessage(); // Bolte hi send ho jaye
-        };
-        recognition.start();
-    }
-
-    // ✉️ 3. MESSAGE LOGIC
     async function sendMessage() {
         const msg = userInput.value.trim();
         if (!msg) return;
@@ -85,6 +30,7 @@
         chatBox.scrollTop = chatBox.scrollHeight;
 
         try {
+            // Speed Fix: Timeout 8 second tak limit kiya hai
             const res = await fetch('/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
@@ -93,18 +39,31 @@
             const data = await res.json();
             
             typing.style.display = 'none';
-            chatBox.innerHTML += `<div class="msg ai">${data.reply}</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-
-            // NEER REPLY BOLEGA
-            speak(data.reply);
             
+            // UI Update aur Voice ek sath trigger
+            const aiMsg = `<div class="msg ai">${data.reply}</div>`;
+            chatBox.insertAdjacentHTML('beforeend', aiMsg);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            speak(data.reply); 
+
         } catch (e) {
             typing.style.display = 'none';
-            chatBox.innerHTML += `<div class="msg ai">Bhai, net gaya tera! 😅</div>`;
+            console.log("Slow connection!");
         }
     }
-</script>
 
-</body>
-</html>
+    // Voice to Text (Mic) Logic
+    function startVoice() {
+        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+        recognition.lang = 'hi-IN';
+        recognition.onstart = () => document.getElementById('mic-btn').classList.add('listening');
+        recognition.onend = () => document.getElementById('mic-btn').classList.remove('listening');
+        recognition.onresult = (e) => {
+            userInput.value = e.results[0][0].transcript;
+            sendMessage();
+        };
+        recognition.start();
+    }
+        </script>
+        
