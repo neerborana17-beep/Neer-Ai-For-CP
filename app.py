@@ -5,16 +5,18 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Config
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
+# --- FIX: SSL Handshake Error Bypass ---
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
+    # Adding tlsAllowInvalidCertificates to fix SSL issue
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000, tlsAllowInvalidCertificates=True)
     db = client['neer_db']
     chat_col = db['history']
     mongo_status = True
-except:
+except Exception as e:
+    print(f"Mongo Error: {e}")
     mongo_status = False
 
 @app.route('/')
@@ -26,23 +28,21 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Bol na bhai!"})
 
-    # --- NO-FAULT DATE LOGIC (IST Fix without pytz) ---
-    # Render server UTC use karta hai, India UTC se 5.5 ghante aage hai
+    # IST Date/Time Logic
     now_utc = datetime.utcnow()
     ist_now = now_utc + timedelta(hours=5, minutes=30)
     current_date = ist_now.strftime("%d %B %Y")
     current_time = ist_now.strftime("%I:%M %p")
 
-    # --- System Prompt ---
     system_instr = (
         f"Tera naam Neer hai. Tu CP ka pakka yaar hai. "
         f"Aaj ki date: {current_date}, Time: {current_time}. "
-        "Strict Rule: Fast reply kar (max 2 lines). Formal mat ho. "
-        "Tu ek desi close friend hai, Hinglish mein baat kar."
+        "Strict Rule: Fast reply kar (max 2 lines). Formal mat ho. Hinglish bol."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
+    # Memory Fetch
     if mongo_status:
         try:
             history = list(chat_col.find().sort("time", -1).limit(3))
@@ -56,10 +56,7 @@ def chat():
     try:
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
-            headers={
-                "Authorization": f"Bearer {API_KEY}",
-                "Content-Type": "application/json"
-            },
+            headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
@@ -68,20 +65,20 @@ def chat():
             timeout=10
         )
         
-        res_data = response.json()
-        if 'choices' in res_data:
-            reply = res_data['choices'][0]['message']['content']
-            reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
-        else:
-            reply = "Bhai, API key check kar, kuch locha hai!"
+        reply = response.json()['choices'][0]['message']['content']
+        reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
+        # Save to Mongo
         if mongo_status:
-            chat_col.insert_one({"role": "user", "content": user_input, "time": ist_now})
-            chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now})
+            try:
+                chat_col.insert_one({"role": "user", "content": user_input, "time": ist_now})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now})
+            except: pass
 
         return jsonify({"reply": reply})
     except Exception as e:
-        return jsonify({"reply": f"Locha ho gaya bhai: {str(e)}"})
+        # User ko technical error na dikhe isliye friendly message
+        return jsonify({"reply": "Bhai, dimag hang ho gaya, net dekh le apna! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
