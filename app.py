@@ -5,14 +5,20 @@ from datetime import datetime, timedelta
 
 app = Flask(__name__)
 
-# Config
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# Stable MongoDB Connection
-client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=5000)
-db = client['neer_db']
-chat_col = db['history']
+# Fast connection (Sirf 3 second wait karega, atkeyga nahi)
+try:
+    client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=3000)
+    db = client['neer_db']
+    chat_col = db['history']
+    # Check connection
+    client.admin.command('ping')
+    mongo_ok = True
+except:
+    mongo_ok = False
+    print("MongoDB skip kiya speed ke liye")
 
 @app.route('/')
 def index():
@@ -22,42 +28,38 @@ def index():
 def chat():
     try:
         user_input = request.json.get("message")
-        now_ist = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        messages = [{"role": "system", "content": "Tera naam Neer hai. Tu CP ka dost hai. Desi Hinglish bol."}]
         
-        messages = [{"role": "system", "content": "Tera naam Neer hai. Tu CP ka jigar ka tukda hai. Hinglish bol."}]
-        
-        # Get last 3 chats
-        try:
-            history = list(chat_col.find().sort("time", -1).limit(3))
-            for m in reversed(history):
-                messages.append({"role": m['role'], "content": m['content']})
-        except: pass
-        
+        # History fetch with safety
+        if mongo_ok:
+            try:
+                history = list(chat_col.find().sort("time", -1).limit(3))
+                for m in reversed(history):
+                    messages.append({"role": m['role'], "content": m['content']})
+            except: pass
+            
         messages.append({"role": "user", "content": user_input})
 
-        # API Call with retry
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}"},
-            data=json.dumps({
-                "model": "google/gemini-2.0-flash-lite-001", 
-                "messages": messages
-            }),
-            timeout=15 # Time badha diya
+            data=json.dumps({"model": "google/gemini-2.0-flash-lite-001", "messages": messages}),
+            timeout=10
         )
         
-        res_data = response.json()
-        reply = res_data['choices'][0]['message']['content']
+        reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # Save to DB
-        chat_col.insert_one({"role": "user", "content": user_input, "time": now_ist})
-        chat_col.insert_one({"role": "assistant", "content": reply, "time": now_ist})
+        if mongo_ok:
+            try:
+                chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.utcnow()})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.utcnow()})
+            except: pass
 
         return jsonify({"reply": reply})
     except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"reply": "Bhai thoda network issue hai, par main yahi hoon. Phir se bol?"})
+        return jsonify({"reply": "Bhai, server thoda slow hai, par main sun raha hoon. Kya haal hai?"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=10000)
+        
