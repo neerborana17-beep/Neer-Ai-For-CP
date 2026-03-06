@@ -1,27 +1,35 @@
 <!DOCTYPE html>
-<html>
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neer AI</title>
+    <title>Neer AI | Dost</title>
     <style>
-        body { font-family: sans-serif; background: #0b1120; color: white; margin: 0; padding: 10px; }
-        #chat-box { height: 70vh; overflow-y: auto; border: 1px solid #333; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; }
-        .msg { padding: 8px; margin: 5px; border-radius: 8px; max-width: 80%; }
-        .user { background: #38bdf8; align-self: flex-end; color: black; }
-        .ai { background: #334155; align-self: flex-start; }
-        .input-area { display: flex; gap: 5px; }
-        input { flex: 1; padding: 10px; border-radius: 5px; border: none; }
-        button { padding: 10px; background: #38bdf8; border: none; border-radius: 5px; cursor: pointer; }
+        :root { --bg: #0b1120; --glass: rgba(17, 25, 40, 0.95); --accent: #38bdf8; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; height: 100vh; }
+        .chat-container { width: 100%; max-width: 500px; background: var(--glass); display: flex; flex-direction: column; }
+        .header { padding: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); text-align: center; background: rgba(0,0,0,0.2); }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
+        .msg { max-width: 80%; padding: 12px; border-radius: 15px; font-size: 15px; }
+        .user { align-self: flex-end; background: var(--accent); color: #000; }
+        .ai { align-self: flex-start; background: rgba(255,255,255,0.1); }
+        .input-area { padding: 15px; display: flex; gap: 10px; background: #070b14; }
+        input { flex: 1; background: #1e293b; border: none; border-radius: 10px; padding: 12px; color: white; outline: none; }
+        .btn { background: var(--accent); border: none; padding: 10px 15px; border-radius: 10px; cursor: pointer; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="chat-box"></div>
-    <div id="typing" style="display:none; font-size: 12px; color: #aaa;">Neer soch raha hai...</div>
-    <div class="input-area">
-        <button onclick="startVoice()">🎙️</button>
-        <input type="text" id="user-input" placeholder="Kuch bol..." onkeypress="if(event.key==='Enter') sendMessage()">
-        <button onclick="sendMessage()">Bhej</button>
+    <div class="chat-container">
+        <div class="header">
+            <h2 style="margin:0; color:var(--accent);">Neer 🎙️</h2>
+            <small style="color:#10b981;">● Online (Always for CP)</small>
+        </div>
+        <div id="chat-box"></div>
+        <div class="input-area">
+            <button class="btn" onclick="startVoice()">🎙️</button>
+            <input type="text" id="user-input" placeholder="Bol bhai..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button class="btn" onclick="sendMessage()">Bhej</button>
+        </div>
     </div>
 
     <script>
@@ -32,25 +40,17 @@
             window.speechSynthesis.cancel();
             const s = new SpeechSynthesisUtterance(text);
             s.lang = 'hi-IN';
-            s.pitch = 0.8; // Male-ish tone
+            s.pitch = 0.7; // Lower pitch = Man's voice
+            s.rate = 1.0;
             window.speechSynthesis.speak(s);
         }
 
-        function startVoice() {
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            if(!SpeechRecognition) return alert("Not supported");
-            const rec = new SpeechRecognition();
-            rec.lang = 'hi-IN';
-            rec.onresult = (e) => { userInput.value = e.results[0][0].transcript; sendMessage(); };
-            rec.start();
-        }
-
         async function sendMessage() {
-            const m = userInput.value;
+            const m = userInput.value.trim();
             if(!m) return;
             chatBox.innerHTML += `<div class="msg user">${m}</div>`;
             userInput.value = '';
-            document.getElementById('typing').style.display = 'block';
+            chatBox.scrollTop = chatBox.scrollHeight;
 
             const res = await fetch('/chat', {
                 method: 'POST',
@@ -58,11 +58,18 @@
                 body: JSON.stringify({message: m})
             });
             const d = await res.json();
-            document.getElementById('typing').style.display = 'none';
             chatBox.innerHTML += `<div class="msg ai">${d.reply}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
             speak(d.reply);
         }
+
+        function startVoice() {
+            const rec = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            rec.lang = 'hi-IN';
+            rec.onresult = (e) => { userInput.value = e.results[0][0].transcript; sendMessage(); };
+            rec.start();
+        }
     </script>
 </body>
-</html>
+            </html>
+            
