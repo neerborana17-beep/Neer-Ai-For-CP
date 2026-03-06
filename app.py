@@ -5,13 +5,11 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Fast Config ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# MongoDB with 1.5s Fast Timeout
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
     db = client['neer_db']
     chat_col = db['history']
     mongo_status = True
@@ -25,23 +23,23 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Bol na bhai! 😂"})
+    if not user_input: return jsonify({"reply": "Bol na bhai!"})
 
-    # --- Smart Context & Personality ---
-    # AI ko bataya gaya hai ki wo sirf important baaton par focus kare
+    # --- Close Friend & Internet Instructions ---
     system_instr = (
-        "Tera naam Neer hai, CP ka yaar. "
-        "Strict Rule: Sirf 2-3 lines mein desi Hinglish reply kar. "
-        "User ki hobbies, naam aur important baatein yaad rakh, baaki ignore kar. "
-        "Baar-baar 2026 ya AI hone ka bhashan mat de. Be natural."
+        "Tera naam Neer hai. Tu CP ka sabse pakka aur purana yaar hai (Best Friend). "
+        "Tera baat karne ka tarika ekdam casual, mazaakiya aur bina formality wala hai. "
+        "Faltu ki baatein mat bol jaise 'Main tera dost hoon' ya 'Neer bol raha hoon'. "
+        "Seedha reply de. Agar user news ya kisi current event ke baare mein puche, "
+        "toh tu internet ka use karke ekdam latest info dega. "
+        "Hinglish (mix) mein baat kar. Thodi mazaak-masti aur roasting bhi chalegi."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # --- Memory Fetching (Optimized to last 4 for speed) ---
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(4))
+            history = list(chat_col.find().sort("time", -1).limit(5))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -50,25 +48,23 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # Using Gemini 2.0 Flash Lite for < 4s response
+        # Requesting with Web Search Capability
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-lite-001", 
+                "model": "google/gemini-2.0-flash-001", 
                 "messages": messages,
-                "temperature": 0.8,
-                "max_tokens": 120 
+                "temperature": 0.9, # Zyada friendly/creative tone ke liye
+                "plugins": [{"id": "web_search"}] # Kuch providers isse support karte hain
             }),
-            timeout=8
+            timeout=15 # Search mein time lag sakta hai isliye timeout badhaya
         )
         
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # --- Smart Saving Logic ---
-        # Sirf tab save karega jab message 4 words se bada ho (Faltu "Hi/Bye" ignore karne ke liye)
-        if mongo_status and len(user_input.split()) > 3:
+        if mongo_status and len(user_input.split()) > 2:
             try:
                 chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now()})
                 chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now()})
@@ -76,7 +72,7 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Network hichki le raha hai, phir se bol! 😂"})
+        return jsonify({"reply": "Bhai, dimag hang ho gaya, net dekh le apna! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
