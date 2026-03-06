@@ -8,15 +8,13 @@ app = Flask(__name__)
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# --- FIX: SSL Handshake Error Bypass ---
+# Connection setting ko light rakha hai taaki site turant khule
 try:
-    # Adding tlsAllowInvalidCertificates to fix SSL issue
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000, tlsAllowInvalidCertificates=True)
     db = client['neer_db']
     chat_col = db['history']
     mongo_status = True
-except Exception as e:
-    print(f"Mongo Error: {e}")
+except:
     mongo_status = False
 
 @app.route('/')
@@ -25,35 +23,25 @@ def index():
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Bol na bhai!"})
-
-    # IST Date/Time Logic
-    now_utc = datetime.utcnow()
-    ist_now = now_utc + timedelta(hours=5, minutes=30)
-    current_date = ist_now.strftime("%d %B %Y")
-    current_time = ist_now.strftime("%I:%M %p")
-
-    system_instr = (
-        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. "
-        f"Aaj ki date: {current_date}, Time: {current_time}. "
-        "Strict Rule: Fast reply kar (max 2 lines). Formal mat ho. Hinglish bol."
-    )
-    
-    messages = [{"role": "system", "content": system_instr}]
-    
-    # Memory Fetch
-    if mongo_status:
-        try:
-            history = list(chat_col.find().sort("time", -1).limit(3))
-            history.reverse()
-            for m in history:
-                messages.append({"role": m['role'], "content": m['content']})
-        except: pass
-            
-    messages.append({"role": "user", "content": user_input})
-    
     try:
+        user_input = request.json.get("message")
+        if not user_input: return jsonify({"reply": "Bol na bhai!"})
+
+        now_utc = datetime.utcnow()
+        ist_now = now_utc + timedelta(hours=5, minutes=30)
+        
+        system_instr = f"Tera naam Neer hai. Tu CP ka dost hai. Aaj: {ist_now.strftime('%d %b %Y')}. Hinglish bol."
+        messages = [{"role": "system", "content": system_instr}]
+        
+        if mongo_status:
+            try:
+                history = list(chat_col.find().sort("time", -1).limit(3))
+                for m in reversed(history):
+                    messages.append({"role": m['role'], "content": m['content']})
+            except: pass
+            
+        messages.append({"role": "user", "content": user_input})
+        
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
@@ -68,18 +56,14 @@ def chat():
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # Save to Mongo
         if mongo_status:
-            try:
-                chat_col.insert_one({"role": "user", "content": user_input, "time": ist_now})
-                chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now})
-            except: pass
+            chat_col.insert_one({"role": "user", "content": user_input, "time": ist_now})
+            chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now})
 
         return jsonify({"reply": reply})
     except Exception as e:
-        # User ko technical error na dikhe isliye friendly message
-        return jsonify({"reply": "Bhai, dimag hang ho gaya, net dekh le apna! 😂"})
+        return jsonify({"reply": "Ek baar refresh kar le bhai, connection slow hai!"})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
-    
+    app.run(host='0.0.0.0', port=10000)
+        
