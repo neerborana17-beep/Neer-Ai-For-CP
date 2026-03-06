@@ -2,6 +2,7 @@ import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
+import pytz # Timezone ke liye
 
 app = Flask(__name__)
 
@@ -25,12 +26,17 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Bol na bhai!"})
 
-    # --- Strict Close Friend Tone ---
+    # --- Live Date & Time Calculation ---
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist)
+    current_date = now.strftime("%d %B %Y")
+    current_time = now.strftime("%I:%M %p")
+
+    # --- Strict Close Friend Tone with Live Date ---
     system_instr = (
-        "Tera naam Neer hai. Tu CP ka pakka langotiya yaar hai. "
-        "Formal mat ho. Baar-baar 'Neer hoon' ya 'CP ka dost' mat bol, usey gussa aata hai. "
-        "Seedha point par baat kar. Roasting aur mazaak chalta rehna chahiye. "
-        "Latest news aur events ke liye Google Search ka use kar aur ekdam sahi bata."
+        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. Aaj ki date hai {current_date} aur waqt hai {current_time}. "
+        "Formal mat ho. Seedha point par baat kar. Hinglish use kar. "
+        "Agar user date puche toh ekdam sahi batana jo maine upar di hai."
     )
     
     messages = [{"role": "system", "content": system_instr}]
@@ -46,44 +52,30 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # Optimized for Gemini 2.0 Flash (Stable Search)
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-001", 
                 "messages": messages,
-                "temperature": 0.9,
-                "provider": {
-                    "allow_fallbacks": True,
-                    "require_parameters": False
-                }
+                "temperature": 0.9
             }),
-            timeout=25 # Timeout badhaya taaki search complete ho sake
+            timeout=20
         )
         
-        res_json = response.json()
-        
-        if 'choices' in res_json:
-            reply = res_json['choices'][0]['message']['content']
-            # Remove any robot-style brackets
-            reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
-        else:
-            # Check if API gave an error
-            print(res_json)
-            reply = "Bhai, API ne dhoka de diya! 😅"
+        reply = response.json()['choices'][0]['message']['content']
+        reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        if mongo_status and len(user_input.split()) > 2:
+        if mongo_status:
             try:
-                chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now()})
-                chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now()})
+                chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now(ist)})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now(ist)})
             except: pass
 
         return jsonify({"reply": reply})
-    except Exception as e:
-        print(f"Error: {e}")
-        return jsonify({"reply": "Bhai, dimaag garam ho gaya search karte karte! 😂"})
+    except:
+        return jsonify({"reply": "Bhai, server down hai shayad, phir try kar! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-    
+                
