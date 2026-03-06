@@ -2,7 +2,7 @@ import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
-import pytz # Timezone ke liye
+import pytz # Yeh India ka time sahi karega
 
 app = Flask(__name__)
 
@@ -26,17 +26,19 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Bol na bhai!"})
 
-    # --- Live Date & Time Calculation ---
-    ist = pytz.timezone('Asia/Kolkata')
-    now = datetime.now(ist)
-    current_date = now.strftime("%d %B %Y")
-    current_time = now.strftime("%I:%M %p")
+    # --- INDIA TIMEZONE LOGIC ---
+    IST = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(IST)
+    current_date = now.strftime("%A, %d %B %Y") # Example: Friday, 06 March 2026
+    current_time = now.strftime("%I:%M %p")     # Example: 01:20 PM
 
-    # --- Strict Close Friend Tone with Live Date ---
+    # --- System Prompt with Forced Date ---
     system_instr = (
-        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. Aaj ki date hai {current_date} aur waqt hai {current_time}. "
-        "Formal mat ho. Seedha point par baat kar. Hinglish use kar. "
-        "Agar user date puche toh ekdam sahi batana jo maine upar di hai."
+        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. "
+        f"Aaj ki sahi date hai: {current_date}. "
+        f"Abhi ka sahi time hai: {current_time}. "
+        "Strict Rule: Agar user date ya time puche, toh yahi batana jo upar likhi hai. "
+        "Tu ek close friend ki tarah Hinglish mein baat kar. Formal mat ho."
     )
     
     messages = [{"role": "system", "content": system_instr}]
@@ -58,9 +60,9 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-001", 
                 "messages": messages,
-                "temperature": 0.9
+                "temperature": 0.8
             }),
-            timeout=20
+            timeout=15
         )
         
         reply = response.json()['choices'][0]['message']['content']
@@ -68,14 +70,14 @@ def chat():
 
         if mongo_status:
             try:
-                chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now(ist)})
-                chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now(ist)})
+                chat_col.insert_one({"role": "user", "content": user_input, "time": now})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
             except: pass
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Bhai, server down hai shayad, phir try kar! 😂"})
+        return jsonify({"reply": "Bhai, date-time set karne mein dimaag ghum gaya! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-                
+        
