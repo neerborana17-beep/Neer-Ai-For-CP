@@ -25,14 +25,12 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Bol na bhai!"})
 
-    # --- Close Friend & Internet Instructions ---
+    # --- Strict Close Friend Tone ---
     system_instr = (
-        "Tera naam Neer hai. Tu CP ka sabse pakka aur purana yaar hai (Best Friend). "
-        "Tera baat karne ka tarika ekdam casual, mazaakiya aur bina formality wala hai. "
-        "Faltu ki baatein mat bol jaise 'Main tera dost hoon' ya 'Neer bol raha hoon'. "
-        "Seedha reply de. Agar user news ya kisi current event ke baare mein puche, "
-        "toh tu internet ka use karke ekdam latest info dega. "
-        "Hinglish (mix) mein baat kar. Thodi mazaak-masti aur roasting bhi chalegi."
+        "Tera naam Neer hai. Tu CP ka pakka langotiya yaar hai. "
+        "Formal mat ho. Baar-baar 'Neer hoon' ya 'CP ka dost' mat bol, usey gussa aata hai. "
+        "Seedha point par baat kar. Roasting aur mazaak chalta rehna chahiye. "
+        "Latest news aur events ke liye Google Search ka use kar aur ekdam sahi bata."
     )
     
     messages = [{"role": "system", "content": system_instr}]
@@ -48,21 +46,32 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # Requesting with Web Search Capability
+        # Optimized for Gemini 2.0 Flash (Stable Search)
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-001", 
                 "messages": messages,
-                "temperature": 0.9, # Zyada friendly/creative tone ke liye
-                "plugins": [{"id": "web_search"}] # Kuch providers isse support karte hain
+                "temperature": 0.9,
+                "provider": {
+                    "allow_fallbacks": True,
+                    "require_parameters": False
+                }
             }),
-            timeout=15 # Search mein time lag sakta hai isliye timeout badhaya
+            timeout=25 # Timeout badhaya taaki search complete ho sake
         )
         
-        reply = response.json()['choices'][0]['message']['content']
-        reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
+        res_json = response.json()
+        
+        if 'choices' in res_json:
+            reply = res_json['choices'][0]['message']['content']
+            # Remove any robot-style brackets
+            reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
+        else:
+            # Check if API gave an error
+            print(res_json)
+            reply = "Bhai, API ne dhoka de diya! 😅"
 
         if mongo_status and len(user_input.split()) > 2:
             try:
@@ -71,8 +80,9 @@ def chat():
             except: pass
 
         return jsonify({"reply": reply})
-    except:
-        return jsonify({"reply": "Bhai, dimag hang ho gaya, net dekh le apna! 😂"})
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"reply": "Bhai, dimaag garam ho gaya search karte karte! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
