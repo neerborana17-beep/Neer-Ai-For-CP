@@ -2,7 +2,7 @@ import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
-import pytz # Yeh India ka time sahi karega
+import pytz
 
 app = Flask(__name__)
 
@@ -26,26 +26,25 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Bol na bhai!"})
 
-    # --- INDIA TIMEZONE LOGIC ---
+    # --- Live Date (No Search Needed) ---
     IST = pytz.timezone('Asia/Kolkata')
     now = datetime.now(IST)
-    current_date = now.strftime("%A, %d %B %Y") # Example: Friday, 06 March 2026
-    current_time = now.strftime("%I:%M %p")     # Example: 01:20 PM
+    current_date = now.strftime("%d %B %Y")
+    current_time = now.strftime("%I:%M %p")
 
-    # --- System Prompt with Forced Date ---
+    # --- Optimized System Prompt ---
     system_instr = (
-        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. "
-        f"Aaj ki sahi date hai: {current_date}. "
-        f"Abhi ka sahi time hai: {current_time}. "
-        "Strict Rule: Agar user date ya time puche, toh yahi batana jo upar likhi hai. "
-        "Tu ek close friend ki tarah Hinglish mein baat kar. Formal mat ho."
+        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. Aaj: {current_date}, Time: {current_time}. "
+        "Strict Rule: Fast reply kar (max 2-3 lines). Search mat kar jab tak bohot zaruri na ho. "
+        "Close friend ki tarah Hinglish bol. Formal baatein mat kar."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
+    # Memory limit to 3 for Max Speed
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(5))
+            history = list(chat_col.find().sort("time", -1).limit(3))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -54,30 +53,30 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # Gemini 2.0 Flash Lite is the fastest model right now
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-001", 
+                "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.8
+                "temperature": 0.8,
+                "max_tokens": 150
             }),
-            timeout=15
+            timeout=8 # 8 second se zyada wait nahi karega
         )
         
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
         if mongo_status:
-            try:
-                chat_col.insert_one({"role": "user", "content": user_input, "time": now})
-                chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
-            except: pass
+            chat_col.insert_one({"role": "user", "content": user_input, "time": now})
+            chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Bhai, date-time set karne mein dimaag ghum gaya! 😂"})
+        return jsonify({"reply": "Bhai, net slow hai ya API hang ho gayi! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-        
+    
