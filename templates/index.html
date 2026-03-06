@@ -1,69 +1,68 @@
-<script>
-    const chatBox = document.getElementById('chat-box');
-    const userInput = document.getElementById('user-input');
-    const typing = document.getElementById('typing');
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neer AI</title>
+    <style>
+        body { font-family: sans-serif; background: #0b1120; color: white; margin: 0; padding: 10px; }
+        #chat-box { height: 70vh; overflow-y: auto; border: 1px solid #333; padding: 10px; margin-bottom: 10px; display: flex; flex-direction: column; }
+        .msg { padding: 8px; margin: 5px; border-radius: 8px; max-width: 80%; }
+        .user { background: #38bdf8; align-self: flex-end; color: black; }
+        .ai { background: #334155; align-self: flex-start; }
+        .input-area { display: flex; gap: 5px; }
+        input { flex: 1; padding: 10px; border-radius: 5px; border: none; }
+        button { padding: 10px; background: #38bdf8; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="chat-box"></div>
+    <div id="typing" style="display:none; font-size: 12px; color: #aaa;">Neer soch raha hai...</div>
+    <div class="input-area">
+        <button onclick="startVoice()">🎙️</button>
+        <input type="text" id="user-input" placeholder="Kuch bol..." onkeypress="if(event.key==='Enter') sendMessage()">
+        <button onclick="sendMessage()">Bhej</button>
+    </div>
 
-    // 🔊 MALE VOICE ENGINE (Optimized)
-    function speak(text) {
-        window.speechSynthesis.cancel(); 
-        const speech = new SpeechSynthesisUtterance(text);
-        
-        // Sabhi voices load karo aur Male voice dhoondo
-        let voices = window.speechSynthesis.getVoices();
-        let selectedVoice = voices.find(v => v.name.includes('Male') || v.name.includes('Google hindi')) || voices[0];
-        
-        speech.voice = selectedVoice;
-        speech.lang = 'hi-IN';
-        speech.pitch = 0.85; // 0.8-0.9 se awaaz bhari aur dosti wali lagti hai
-        speech.rate = 1.05;  // Thodi fast speed taaki natural lage
-        
-        window.speechSynthesis.speak(speech);
-    }
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
 
-    async function sendMessage() {
-        const msg = userInput.value.trim();
-        if (!msg) return;
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const s = new SpeechSynthesisUtterance(text);
+            s.lang = 'hi-IN';
+            s.pitch = 0.8; // Male-ish tone
+            window.speechSynthesis.speak(s);
+        }
 
-        chatBox.innerHTML += `<div class="msg user">${msg}</div>`;
-        userInput.value = '';
-        typing.style.display = 'block';
-        chatBox.scrollTop = chatBox.scrollHeight;
+        function startVoice() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if(!SpeechRecognition) return alert("Not supported");
+            const rec = new SpeechRecognition();
+            rec.lang = 'hi-IN';
+            rec.onresult = (e) => { userInput.value = e.results[0][0].transcript; sendMessage(); };
+            rec.start();
+        }
 
-        try {
-            // Speed Fix: Timeout 8 second tak limit kiya hai
+        async function sendMessage() {
+            const m = userInput.value;
+            if(!m) return;
+            chatBox.innerHTML += `<div class="msg user">${m}</div>`;
+            userInput.value = '';
+            document.getElementById('typing').style.display = 'block';
+
             const res = await fetch('/chat', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: msg})
+                body: JSON.stringify({message: m})
             });
-            const data = await res.json();
-            
-            typing.style.display = 'none';
-            
-            // UI Update aur Voice ek sath trigger
-            const aiMsg = `<div class="msg ai">${data.reply}</div>`;
-            chatBox.insertAdjacentHTML('beforeend', aiMsg);
+            const d = await res.json();
+            document.getElementById('typing').style.display = 'none';
+            chatBox.innerHTML += `<div class="msg ai">${d.reply}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
-            
-            speak(data.reply); 
-
-        } catch (e) {
-            typing.style.display = 'none';
-            console.log("Slow connection!");
+            speak(d.reply);
         }
-    }
-
-    // Voice to Text (Mic) Logic
-    function startVoice() {
-        const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-        recognition.lang = 'hi-IN';
-        recognition.onstart = () => document.getElementById('mic-btn').classList.add('listening');
-        recognition.onend = () => document.getElementById('mic-btn').classList.remove('listening');
-        recognition.onresult = (e) => {
-            userInput.value = e.results[0][0].transcript;
-            sendMessage();
-        };
-        recognition.start();
-    }
-        </script>
-        
+    </script>
+</body>
+</html>
