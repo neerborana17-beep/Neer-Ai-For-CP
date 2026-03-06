@@ -1,53 +1,32 @@
 <script>
-    const chatBox = document.getElementById('chat-box');
-    const userInput = document.getElementById('user-input');
-    const typing = document.getElementById('typing');
-    let typingInterval;
+    // ... (Puraana startTyping aur sendMessage logic) ...
 
-    // --- Typing Animation Logic ---
-    function startTypingAnimation() {
-        let dots = "";
-        typing.style.display = 'block';
-        typingInterval = setInterval(() => {
-            dots = dots.length < 3 ? dots + "." : "";
-            typing.innerText = "typing" + dots;
-        }, 500); // Har 0.5 sec mein dot badlega
+    // Notification Setup
+    if ("Notification" in window) {
+        Notification.requestPermission();
     }
 
-    function stopTypingAnimation() {
-        clearInterval(typingInterval);
-        typing.style.display = 'none';
-        typing.innerText = "typing..."; // Reset for next time
-    }
-
-    async function sendMessage() {
-        const msg = userInput.value.trim();
-        if (!msg) return;
-
-        chatBox.innerHTML += `<div class="msg user">${msg}</div>`;
-        userInput.value = '';
-        chatBox.scrollTop = chatBox.scrollHeight;
-
-        // Animation Start
-        startTypingAnimation();
-
-        try {
-            const response = await fetch('/chat', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: msg })
+    function showPush(txt) {
+        if (Notification.permission === "granted") {
+            new Notification("Neer", {
+                body: txt,
+                icon: "https://cdn-icons-png.flaticon.com/512/1698/1698535.png"
             });
-            const data = await response.json();
-            
-            // Animation Stop
-            stopTypingAnimation();
-            
-            chatBox.innerHTML += `<div class="msg ai">${data.reply}</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-        } catch (error) {
-            stopTypingAnimation();
-            chatBox.innerHTML += `<div class="msg ai" style="color:#ef4444;">Abbe net mar gaya tera, refresh kar!</div>`;
         }
     }
-        </script>
-        
+
+    // Har 1 minute mein check karega
+    setInterval(async () => {
+        try {
+            const res = await fetch('/check-notification');
+            const data = await res.json();
+            if (data.new) {
+                showPush(data.reply);
+                // Chat box mein bhi turant dikhao
+                const box = document.getElementById('chat-box');
+                box.innerHTML += `<div class="msg ai">${data.reply}</div>`;
+                box.scrollTop = box.scrollHeight;
+            }
+        } catch(e) {}
+    }, 60000); 
+</script>
