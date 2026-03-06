@@ -1,80 +1,28 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neer</title>
-    <style>
-        :root { --bg: #0b1120; --accent: #38bdf8; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; display: flex; justify-content: center; height: 100vh; }
-        .chat-container { width: 100%; max-width: 500px; display: flex; flex-direction: column; background: rgba(17,25,40,0.95); }
-        .header { padding: 15px 20px; border-bottom: 1px solid #333; text-align: left; }
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; }
-        .msg { padding: 12px; border-radius: 15px; max-width: 80%; font-size: 14px; line-height: 1.4; }
-        .user { align-self: flex-end; background: var(--accent); color: black; border-bottom-right-radius: 2px; }
-        .ai { align-self: flex-start; background: #1e293b; border-bottom-left-radius: 2px; }
-        #typing { display: none; padding: 10px 20px; color: var(--accent); font-size: 12px; font-style: italic; }
-        .input-area { padding: 15px; display: flex; gap: 8px; background: #070b14; }
-        input { flex: 1; padding: 12px; border-radius: 10px; border: none; background: #1e293b; color: white; outline: none; }
-        .btn { background: var(--accent); border: none; padding: 10px 18px; border-radius: 10px; font-weight: bold; cursor: pointer; }
-    </style>
-</head>
-<body>
-    <div class="chat-container">
-        <div class="header">
-            <div style="font-size: 9px; color: #777; letter-spacing: 1px; font-weight: bold;">POWERED BY CP</div>
-            <div style="font-size: 22px; color: var(--accent); font-weight: bold;">Neer</div>
-            <div style="font-size: 11px; color: #10b981;">● online</div>
-        </div>
-        <div id="chat-box"></div>
-        <div id="typing">typing...</div>
-        <div class="input-area">
-            <input type="text" id="user-input" placeholder="Bol bhai..." onkeypress="if(event.key==='Enter') sendMessage()">
-            <button class="btn" onclick="sendMessage()">Bhej</button>
-        </div>
-    </div>
+<script>
+    // Browser Notification Setup
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
 
-    <script>
-        const chatBox = document.getElementById('chat-box');
-        const typing = document.getElementById('typing');
-        let tInterval;
-
-        function startTyping() {
-            typing.style.display = 'block';
-            let d = "";
-            tInterval = setInterval(() => {
-                d = d.length < 3 ? d + "." : "";
-                typing.innerText = "typing" + d;
-            }, 400);
-        }
-
-        async function sendMessage() {
-            const inp = document.getElementById('user-input');
-            const m = inp.value.trim();
-            if(!m) return;
-
-            chatBox.innerHTML += `<div class="msg user">${m}</div>`;
-            inp.value = '';
-            chatBox.scrollTop = chatBox.scrollHeight;
-            startTyping();
-
-            try {
-                const res = await fetch('/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: m})
-                });
-                const d = await res.json();
-                clearInterval(tInterval);
-                typing.style.display = 'none';
-                chatBox.innerHTML += `<div class="msg ai">${d.reply}</div>`;
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } catch(e) { 
-                clearInterval(tInterval);
-                typing.style.display = 'none';
-                chatBox.innerHTML += `<div class="msg ai">Bhai, net check kar le ek baar!</div>`;
+    // Har 60 second mein backend se poochega ki Neer ne randomly kuch bheja kya
+    setInterval(async () => {
+        try {
+            const res = await fetch('/check-notification');
+            const data = await res.json();
+            if (data.new) {
+                // Phone notification dikhao
+                if (Notification.permission === "granted") {
+                    new Notification("Neer", {
+                        body: data.reply,
+                        icon: "https://cdn-icons-png.flaticon.com/512/1698/1698535.png"
+                    });
+                }
+                // Chat screen par bhi update karo
+                const box = document.getElementById('chat-box');
+                box.innerHTML += `<div class="msg ai">${data.reply}</div>`;
+                box.scrollTop = box.scrollHeight;
             }
-        }
-    </script>
-</body>
-</html>
+        } catch(e) {}
+    }, 60000);
+            </script>
+            
