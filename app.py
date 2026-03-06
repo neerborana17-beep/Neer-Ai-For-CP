@@ -1,20 +1,28 @@
-import os, requests, json, re, random
+import os, requests, json, re, random, logging
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime, timedelta
 
+# Logging setup taaki Render logs mein error dikhe
+logging.basicConfig(level=logging.INFO)
+
 app = Flask(__name__)
 
+# ENV Variables check
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# Stable Connection with Timeout
+# Stable MongoDB Connection
 try:
-    client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=3000)
+    if not MONGO_URI:
+        raise ValueError("MONGO_URI missing in Environment Variables")
+    client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True, serverSelectionTimeoutMS=5000)
     db = client['neer_db']
     chat_col = db['history']
+    client.admin.command('ping') # Check if connection is alive
     mongo_ok = True
-except:
+except Exception as e:
+    logging.error(f"MongoDB Error: {e}")
     mongo_ok = False
 
 @app.route('/')
@@ -23,69 +31,57 @@ def index():
 
 @app.route('/auto-greet')
 def auto_greet():
-    # 40% Chance ki Neer message bhejega (Randomness)
-    if random.random() > 0.4:
-        return jsonify({"status": "Neer abhi vella baitha hai, mann nahi hai uska"}), 200
-
-    ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
-    h = ist_now.hour
-    
-    # Time ke hisab se vibe change
-    vibe = "Morning roast" if 5 <= h <= 11 else "Lunch bakchodi" if 12 <= h <= 16 else "Shaam ki gali" if 17 <= h <= 21 else "Raat ka emotional gyaan"
-
-    system_instr = (
-        f"Tera naam Neer hai. Tu CP ka pakka dost hai. Vibe: {vibe}. "
-        f"Bina kisi wajah ke CP ko ekdam short desi style mein (max 1 line) msg kar. "
-        f"Dosti wali galiyan (BC, saale) use kar. AI mat ban, ek real dost ban."
-    )
-
     try:
+        # 40% Chance randomness
+        if random.random() > 0.4:
+            return jsonify({"status": "Neer is sleeping"}), 200
+
+        ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
+        h = ist_now.hour
+        vibe = "Morning roast" if 5 <= h <= 11 else "Lunch bakchodi" if 12 <= h <= 17 else "Shaam ki gali"
+        
+        system_instr = f"Tera naam Neer hai. Tu CP ka dost hai. Vibe: {vibe}. Short desi message bhej dosti wali galiyon ke saath."
+
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}"},
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": [{"role": "system", "content": system_instr}],
-                "max_tokens": 60,
-                "temperature": 0.9
+                "max_tokens": 50
             }),
             timeout=10
         )
-        reply = response.json()['choices'][0]['message']['content']
-        reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
+        reply = response.json()['choices'][0]['message']['content'].strip()
 
         if mongo_ok:
-            chat_col.insert_one({
-                "role": "assistant", 
-                "content": reply, 
-                "time": ist_now,
-                "is_notified": False # Browser ko signal dene ke liye
-            })
+            chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now, "is_notified": False})
         return jsonify({"status": "Sent", "msg": reply})
-    except:
-        return jsonify({"status": "Error"}), 500
+    except Exception as e:
+        logging.error(f"Auto-greet failed: {e}")
+        return jsonify({"status": "Error", "details": str(e)}), 500
 
 @app.route('/check-notification')
 def check_notification():
     if not mongo_ok: return jsonify({"new": False})
-    msg = chat_col.find_one_and_update(
-        {"role": "assistant", "is_notified": False},
-        {"$set": {"is_notified": True}}
-    )
-    if msg:
-        return jsonify({"new": True, "reply": msg['content']})
+    try:
+        msg = chat_col.find_one_and_update(
+            {"role": "assistant", "is_notified": False},
+            {"$set": {"is_notified": True}},
+            sort=[("time", -1)]
+        )
+        if msg:
+            return jsonify({"new": True, "reply": msg['content']})
+    except: pass
     return jsonify({"new": False})
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    # ... (Puraana short chat logic yahan rahega) ...
     try:
         user_input = request.json.get("message")
         ist_now = datetime.utcnow() + timedelta(hours=5, minutes=30)
         
-        system_instr = "Tera naam Neer hai. Tu CP ka dost hai. Short desi replies de, galiyan chalengi. AI mat ban."
-        messages = [{"role": "system", "content": system_instr}]
-        
+        messages = [{"role": "system", "content": "Tu Neer hai, CP ka dost. Short desi replies de."}]
         if mongo_ok:
             history = list(chat_col.find().sort("time", -1).limit(4))
             for m in reversed(history):
@@ -99,17 +95,17 @@ def chat():
             data=json.dumps({"model": "google/gemini-2.0-flash-lite-001", "messages": messages}),
             timeout=8
         )
-        reply = response.json()['choices'][0]['message']['content']
-        reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
+        reply = response.json()['choices'][0]['message']['content'].strip()
 
         if mongo_ok:
             chat_col.insert_one({"role": "user", "content": user_input, "time": ist_now})
             chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now, "is_notified": True})
 
         return jsonify({"reply": reply})
-    except:
-        return jsonify({"reply": "Abbe net check kar saale."})
+    except Exception as e:
+        return jsonify({"reply": f"Error: {str(e)}"})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=10000)
-                
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port)
+    
