@@ -1,28 +1,78 @@
 <script>
-    // Browser Notification Setup
-    if ("Notification" in window) {
-        Notification.requestPermission();
+    const chatBox = document.getElementById('chat-box');
+    const userInput = document.getElementById('user-input');
+    const micBtn = document.getElementById('mic-btn');
+    const typing = document.getElementById('typing');
+
+    // 🔊 MALE VOICE LOGIC
+    let maleVoice = null;
+
+    function loadVoices() {
+        const voices = window.speechSynthesis.getVoices();
+        // Try to find a Hindi or English Male voice
+        maleVoice = voices.find(v => (v.lang.includes('hi') || v.lang.includes('en')) && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('google')));
     }
 
-    // Har 60 second mein backend se poochega ki Neer ne randomly kuch bheja kya
-    setInterval(async () => {
+    window.speechSynthesis.onvoiceschanged = loadVoices;
+    loadVoices();
+
+    function speak(text) {
+        window.speechSynthesis.cancel();
+        const speech = new SpeechSynthesisUtterance(text);
+        
+        if (maleVoice) {
+            speech.voice = maleVoice;
+        }
+        
+        speech.lang = 'hi-IN';
+        speech.rate = 1.0; 
+        speech.pitch = 0.8; // Pitch kam karne se awaaz bhari (Male) lagti hai
+        
+        window.speechSynthesis.speak(speech);
+    }
+
+    async function sendMessage() {
+        const msg = userInput.value.trim();
+        if (!msg) return;
+
+        chatBox.innerHTML += `<div class="msg user">${msg}</div>`;
+        userInput.value = '';
+        typing.style.display = 'block';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
         try {
-            const res = await fetch('/check-notification');
+            const res = await fetch('/chat', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({message: msg})
+            });
             const data = await res.json();
-            if (data.new) {
-                // Phone notification dikhao
-                if (Notification.permission === "granted") {
-                    new Notification("Neer", {
-                        body: data.reply,
-                        icon: "https://cdn-icons-png.flaticon.com/512/1698/1698535.png"
-                    });
-                }
-                // Chat screen par bhi update karo
-                const box = document.getElementById('chat-box');
-                box.innerHTML += `<div class="msg ai">${data.reply}</div>`;
-                box.scrollTop = box.scrollHeight;
-            }
-        } catch(e) {}
-    }, 60000);
-            </script>
             
+            // SYNC FIX: Message aur Voice ek saath!
+            typing.style.display = 'none';
+            chatBox.innerHTML += `<div class="msg ai">${data.reply}</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+            
+            speak(data.reply); // Turant trigger
+            
+        } catch (e) {
+            typing.style.display = 'none';
+            chatBox.innerHTML += `<div class="msg ai">Bhai, kuch locha hua hai! 😅</div>`;
+        }
+    }
+
+    // Voice to Text logic same rahega...
+    function startVoice() {
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.lang = 'hi-IN';
+        recognition.onstart = () => micBtn.classList.add('listening');
+        recognition.onend = () => micBtn.classList.remove('listening');
+        recognition.onresult = (event) => {
+            userInput.value = event.results[0][0].transcript;
+            sendMessage();
+        };
+        recognition.start();
+    }
+                                                                                          </script>
+                                                                                          
