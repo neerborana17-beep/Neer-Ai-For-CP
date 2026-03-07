@@ -1,6 +1,4 @@
 flask
 requests
-pymongo[srv]
-certifi
-dnspython
 gunicorn
+pymongo[srv]
