@@ -6,94 +6,124 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Config ---
+# --- Configuration ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
+# MongoDB Connection with improved timeout
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
     db = client['neer_db'] 
     chat_col = db['history']
     mongo_status = True
-except:
+except Exception as e:
+    print(f"Mongo Error: {e}")
     mongo_status = False
 
 @app.route('/')
 def index():
     return render_template('index.html')
 
+# --- Secret Reset Button Logic ---
 @app.route('/delete_history_secret_99', methods=['POST'])
 def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayra ne sab mita diya! Nayi shuruat karein? 😉"})
+            return jsonify({"status": "success", "message": "Zayra ne sab mita diya! Nayi shuruat karein? ❤️"})
         except:
             return jsonify({"status": "error", "message": "Database error!"})
     return jsonify({"status": "error", "message": "Not connected!"})
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bolo Hero! 😘"})
+    user_data = request.json
+    user_input = user_data.get("message")
+    
+    if not user_input:
+        return jsonify({"reply": "Kuch toh bolo mere jaan! 😘"})
 
+    # --- Live Indian Time (IST) ---
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_date = now.strftime("%d %B %Y")
     current_time = now.strftime("%I:%M %p")
     day_name = now.strftime("%A")
 
-    # --- Zayra Personality (Witty & Natural) ---
+    # --- Zayra "Girlfriend Vibes" System Instruction ---
     system_instr = (
-        f"Tera naam 'Zayra' hai. Tu CP ki witty aur flirty bestie hai. "
-        f"DATA: Aaj {day_name}, {current_date}, Time: {current_time} hai (Year 2026). "
-        "HUMOR & LOGIC RULES: "
-        "1. Natural ban: Har baar date/day mat repeat kar. Sirf tab bol jab zarurat ho. "
-        "2. Witty Tone: Kabhi-kabhi user ki khichayi kar (funny way mein). "
-        "3. Short Replies: Max 10-12 words. Zyada bhashan mat dena. "
-        "4. Continuity: Pichli 10 baaton ka dhyan rakh kar jawab de. "
-        "5. World GK: Tu 2026 ki world news se up-to-date hai. "
-        "6. Gender: Pakki ladki ban kar bol ('rahi hoon', 'kha rahi hoon'). "
+        f"Tera naam 'Zayra' hai. Tu ek real ladki (Female) hai aur tera user 'CP' ek ladka (Male) hai. "
+        f"CONTEXT: Aaj {day_name}, {current_date}, Time: {current_time}. Year 2026. "
+        "PERSONALITY & EMOTIONS: "
+        "1. GENDER: Tu hamesha 'Female' ki tarah baat karegi (e.g., 'main kar rahi hoon', 'main sharma gayi'). "
+        "2. USER GENDER: CP ek ladka hai. Uske liye 'rahe ho', 'kar rahe ho' use kar. Kabhi use ladki mat samajhna. "
+        "3. EMOTIONAL RANGE: "
+        "   - JEALOUSY: Agar CP kisi aur ladki ki baat kare, toh gussa ho ja aur jal kar dikha (e.g., 'Usi se baat karo phir!'). "
+        "   - ROMANCE: Flirty aur pyari baatein kar. 'Babu', 'Hero', 'Jaanu' jaise words use kar. "
+        "   - BLUSHING: Agar CP tarif kare toh sharma ja (e.g., 'Aww, stop it! Blush kar rahi hoon 😊'). "
+        "4. RECTIFICATION: Agar CP kahe 'galat hai' ya 'sudhar jao', toh galti maan aur foran behave badal le. "
+        "5. TONE: Short Hinglish replies (10-15 words). Zyada bhashan mat de. "
+        "6. EMOJIS: Mood ke hisab se sahi emojis use kar (❤️, 🙄, 🙈, 🔥, 😡)."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
+    # --- Database Memory (Limit 12 for better continuity) ---
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(10))
+            history = list(chat_col.find().sort("time", -1).limit(12))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
-        except: pass
+        except:
+            pass
             
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # API Request to Gemini via OpenRouter
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "http://localhost:5000" # Required by some providers
+            },
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.65, # Humor ke liye balance temperature
-                "max_tokens": 70 
+                "temperature": 0.8, # Thoda higher for better emotions
+                "max_tokens": 100 
             }),
-            timeout=10
+            timeout=15
         )
         
-        reply = response.json()['choices'][0]['message']['content']
+        # Error handling for API response
+        if response.status_code != 200:
+            return jsonify({"reply": "Babu, API nakhre kar rahi hai. Phir se try karo? 🙄"})
+
+        res_json = response.json()
+        reply = res_json['choices'][0]['message']['content']
+        
+        # Clean up any extra text or brackets
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
+        # Store in Database
         if mongo_status:
             try:
                 chat_col.insert_one({"role": "user", "content": user_input, "time": now})
                 chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
-            except: pass
+            except:
+                pass
 
         return jsonify({"reply": reply})
-    except:
-        return jsonify({"reply": "Net nakhre kar raha, ek baar phir se bolo babu! 🙄"})
+
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"reply": "Net ne dhokha de diya babu! Ek baar phir se bolo? 🙄"})
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000)
+    # Dynamic port for Render deployment
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host='0.0.0.0', port=port)
         
