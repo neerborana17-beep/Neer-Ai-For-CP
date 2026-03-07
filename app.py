@@ -6,12 +6,12 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Fast Config ---
+# --- Config ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
     db = client['neer_db'] 
     chat_col = db['history']
     mongo_status = True
@@ -27,7 +27,7 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayra ne sab bhula diya! 😉"})
+            return jsonify({"status": "success", "message": "Zayra ne sab mita diya! Nayi shuruat karein? 😉"})
         except:
             return jsonify({"status": "error", "message": "Database error!"})
     return jsonify({"status": "error", "message": "Not connected!"})
@@ -35,32 +35,32 @@ def clear_memory():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bol mere hero! 😘"})
+    if not user_input: return jsonify({"reply": "Kuch toh bolo Hero! 😘"})
 
-    # --- Live Indian Time (IST) ---
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_date = now.strftime("%d %B %Y")
     current_time = now.strftime("%I:%M %p")
     day_name = now.strftime("%A")
 
-    # --- Zayra Personality & Master Knowledge Logic ---
+    # --- Zayra Personality (Witty & Natural) ---
     system_instr = (
-        f"Tera naam 'Zayra' hai. Tu CP ki thodi flirty female friend hai. "
-        f"IMPORTANT: Current Year 2026 hai. Aaj {day_name}, {current_date}, Time: {current_time} hai. "
-        "WORLD KNOWLEDGE RULES: "
-        "1. Tu 2026 ke world facts ke saath updated hai. Hamesha latest info de. "
-        "2. Agar koi current events ya GK puche toh purani training memory (2023/24) mat use kar, balki latest context se jawab de. "
-        "3. Replies bohot SHORT (max 10-15 words) aur 'Babu/Hero' bol kar de. "
-        "4. Strict Gender: Hamesha ladki ban kar baat kar ('karti hoon', 'ja rahi hoon'). "
-        "5. Kabhi mat bol ki tu AI hai. Tu bas Zayra hai."
+        f"Tera naam 'Zayra' hai. Tu CP ki witty aur flirty bestie hai. "
+        f"DATA: Aaj {day_name}, {current_date}, Time: {current_time} hai (Year 2026). "
+        "HUMOR & LOGIC RULES: "
+        "1. Natural ban: Har baar date/day mat repeat kar. Sirf tab bol jab zarurat ho. "
+        "2. Witty Tone: Kabhi-kabhi user ki khichayi kar (funny way mein). "
+        "3. Short Replies: Max 10-12 words. Zyada bhashan mat dena. "
+        "4. Continuity: Pichli 10 baaton ka dhyan rakh kar jawab de. "
+        "5. World GK: Tu 2026 ki world news se up-to-date hai. "
+        "6. Gender: Pakki ladki ban kar bol ('rahi hoon', 'kha rahi hoon'). "
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(8))
+            history = list(chat_col.find().sort("time", -1).limit(10))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -75,16 +75,16 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7, 
+                "temperature": 0.65, # Humor ke liye balance temperature
                 "max_tokens": 70 
             }),
-            timeout=8
+            timeout=10
         )
         
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        if mongo_status and len(user_input.split()) > 2:
+        if mongo_status:
             try:
                 chat_col.insert_one({"role": "user", "content": user_input, "time": now})
                 chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
@@ -92,8 +92,8 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Network issue hai babu, phir se bolo! 🙄"})
+        return jsonify({"reply": "Net nakhre kar raha, ek baar phir se bolo babu! 🙄"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-            
+        
