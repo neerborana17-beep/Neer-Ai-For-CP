@@ -1,78 +1,103 @@
-<script>
-    const chatBox = document.getElementById('chat-box');
-    const userInput = document.getElementById('user-input');
-    const micBtn = document.getElementById('mic-btn');
-    const typing = document.getElementById('typing');
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neer AI | Close Friend</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        /* [Purana CSS yahan rahega, bas button styles thode change honge] */
+        :root { --bg-color: #0b1120; --glass-bg: rgba(17, 25, 40, 0.85); --accent-color: #38bdf8; --text-color: #f8fafc; }
+        body { font-family: 'Outfit', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        .chat-container { width: 100%; max-width: 480px; height: 92vh; background: var(--glass-bg); backdrop-filter: blur(20px); border-radius: 28px; display: flex; flex-direction: column; box-shadow: 0 25px 50px rgba(0,0,0,0.5); margin: 10px; }
+        .header { padding: 15px 25px; border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .header h1 { font-size: 1.4rem; margin: 0; }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 15px; }
+        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; line-height: 1.4; animation: fadeIn 0.3s ease; }
+        .user-message { align-self: flex-end; background: var(--accent-color); color: #000; border-bottom-right-radius: 4px; }
+        .ai-message { align-self: flex-start; background: rgba(255,255,255,0.1); border-bottom-left-radius: 4px; }
+        .input-area { padding: 15px; display: flex; gap: 8px; background: rgba(0,0,0,0.3); border-bottom-left-radius: 28px; border-bottom-right-radius: 28px; }
+        input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); padding: 12px; border-radius: 12px; color: #fff; outline: none; }
+        .icon-btn { background: none; border: none; font-size: 1.5rem; cursor: pointer; padding: 5px; filter: grayscale(1); transition: 0.2s; }
+        .icon-btn:active { transform: scale(0.9); }
+        .listening { filter: none !important; animation: pulse 1s infinite; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="header">
+            <div style="font-size: 0.6rem; opacity: 0.5;">POWERED BY CP</div>
+            <h1>Neer</h1>
+            <div style="font-size: 0.8rem; color: #10b981;">● online</div>
+        </div>
+        <div id="chat-box"></div>
+        <div id="typing" style="padding: 0 25px; font-size: 0.8rem; color: #aaa; display: none;">Neer is typing...</div>
+        <div class="input-area">
+            <button id="mic-btn" class="icon-btn" onclick="startVoice()">🎙️</button>
+            <input type="text" id="user-input" placeholder="Bol na yaar..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <button onclick="sendMessage()" style="background: var(--accent-color); border:none; padding: 10px 15px; border-radius:10px; font-weight:bold;">Send</button>
+        </div>
+    </div>
 
-    // 🔊 MALE VOICE LOGIC
-    let maleVoice = null;
+    <script>
+        const chatBox = document.getElementById('chat-box');
+        const userInput = document.getElementById('user-input');
+        const typing = document.getElementById('typing');
+        const micBtn = document.getElementById('mic-btn');
 
-    function loadVoices() {
-        const voices = window.speechSynthesis.getVoices();
-        // Try to find a Hindi or English Male voice
-        maleVoice = voices.find(v => (v.lang.includes('hi') || v.lang.includes('en')) && (v.name.toLowerCase().includes('male') || v.name.toLowerCase().includes('google')));
-    }
-
-    window.speechSynthesis.onvoiceschanged = loadVoices;
-    loadVoices();
-
-    function speak(text) {
-        window.speechSynthesis.cancel();
-        const speech = new SpeechSynthesisUtterance(text);
-        
-        if (maleVoice) {
-            speech.voice = maleVoice;
+        // Neer Speaks
+        function speak(text) {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'hi-IN'; // Hinglish style voice
+            utterance.rate = 1.0;
+            window.speechSynthesis.speak(utterance);
         }
-        
-        speech.lang = 'hi-IN';
-        speech.rate = 1.0; 
-        speech.pitch = 0.8; // Pitch kam karne se awaaz bhari (Male) lagti hai
-        
-        window.speechSynthesis.speak(speech);
-    }
 
-    async function sendMessage() {
-        const msg = userInput.value.trim();
-        if (!msg) return;
+        // Voice to Text
+        function startVoice() {
+            const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+            recognition.lang = 'hi-IN';
+            recognition.start();
+            micBtn.classList.add('listening');
 
-        chatBox.innerHTML += `<div class="msg user">${msg}</div>`;
-        userInput.value = '';
-        typing.style.display = 'block';
-        chatBox.scrollTop = chatBox.scrollHeight;
+            recognition.onresult = (event) => {
+                userInput.value = event.results[0][0].transcript;
+                micBtn.classList.remove('listening');
+                sendMessage();
+            };
+            recognition.onerror = () => micBtn.classList.remove('listening');
+        }
 
-        try {
-            const res = await fetch('/chat', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({message: msg})
-            });
-            const data = await res.json();
-            
-            // SYNC FIX: Message aur Voice ek saath!
-            typing.style.display = 'none';
-            chatBox.innerHTML += `<div class="msg ai">${data.reply}</div>`;
+        async function sendMessage() {
+            const msg = userInput.value.trim();
+            if(!msg) return;
+
+            chatBox.innerHTML += `<div class="message user-message">${msg}</div>`;
+            userInput.value = '';
+            typing.style.display = 'block';
             chatBox.scrollTop = chatBox.scrollHeight;
-            
-            speak(data.reply); // Turant trigger
-            
-        } catch (e) {
-            typing.style.display = 'none';
-            chatBox.innerHTML += `<div class="msg ai">Bhai, kuch locha hua hai! 😅</div>`;
-        }
-    }
 
-    // Voice to Text logic same rahega...
-    function startVoice() {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.lang = 'hi-IN';
-        recognition.onstart = () => micBtn.classList.add('listening');
-        recognition.onend = () => micBtn.classList.remove('listening');
-        recognition.onresult = (event) => {
-            userInput.value = event.results[0][0].transcript;
-            sendMessage();
-        };
-        recognition.start();
-    }
-            </script>
-            
+            try {
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: msg})
+                });
+                const data = await response.json();
+                typing.style.display = 'none';
+                chatBox.innerHTML += `<div class="message ai-message">${data.reply}</div>`;
+                chatBox.scrollTop = chatBox.scrollHeight;
+                
+                // Neer will speak the reply
+                speak(data.reply);
+            } catch (e) {
+                typing.style.display = 'none';
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+    </html>
+    
