@@ -2,15 +2,16 @@ import os, requests, json, re
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
-import pytz # Yeh India ka time sahi karega
 
 app = Flask(__name__)
 
+# --- Fast Config ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
+# MongoDB with 1.5s Fast Timeout
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=2000)
+    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=1500)
     db = client['neer_db']
     chat_col = db['history']
     mongo_status = True
@@ -24,28 +25,23 @@ def index():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Bol na bhai!"})
+    if not user_input: return jsonify({"reply": "Bol na bhai! 😂"})
 
-    # --- INDIA TIMEZONE LOGIC ---
-    IST = pytz.timezone('Asia/Kolkata')
-    now = datetime.now(IST)
-    current_date = now.strftime("%A, %d %B %Y") # Example: Friday, 06 March 2026
-    current_time = now.strftime("%I:%M %p")     # Example: 01:20 PM
-
-    # --- System Prompt with Forced Date ---
+    # --- Smart Context & Personality ---
+    # AI ko bataya gaya hai ki wo sirf important baaton par focus kare
     system_instr = (
-        f"Tera naam Neer hai. Tu CP ka pakka yaar hai. "
-        f"Aaj ki sahi date hai: {current_date}. "
-        f"Abhi ka sahi time hai: {current_time}. "
-        "Strict Rule: Agar user date ya time puche, toh yahi batana jo upar likhi hai. "
-        "Tu ek close friend ki tarah Hinglish mein baat kar. Formal mat ho."
+        "Tera naam Neer hai, CP ka yaar. "
+        "Strict Rule: Sirf 2-3 lines mein desi Hinglish reply kar. "
+        "User ki hobbies, naam aur important baatein yaad rakh, baaki ignore kar. "
+        "Baar-baar 2026 ya AI hone ka bhashan mat de. Be natural."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
+    # --- Memory Fetching (Optimized to last 4 for speed) ---
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(5))
+            history = list(chat_col.find().sort("time", -1).limit(4))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -54,30 +50,34 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # Using Gemini 2.0 Flash Lite for < 4s response
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-001", 
+                "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.8
+                "temperature": 0.8,
+                "max_tokens": 120 
             }),
-            timeout=15
+            timeout=8
         )
         
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        if mongo_status:
+        # --- Smart Saving Logic ---
+        # Sirf tab save karega jab message 4 words se bada ho (Faltu "Hi/Bye" ignore karne ke liye)
+        if mongo_status and len(user_input.split()) > 3:
             try:
-                chat_col.insert_one({"role": "user", "content": user_input, "time": now})
-                chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
+                chat_col.insert_one({"role": "user", "content": user_input, "time": datetime.now()})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": datetime.now()})
             except: pass
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Bhai, date-time set karne mein dimaag ghum gaya! 😂"})
+        return jsonify({"reply": "Network hichki le raha hai, phir se bol! 😂"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-    
+        
