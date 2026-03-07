@@ -5,7 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Configuration ---
+# --- Secure Config ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
@@ -14,8 +14,7 @@ try:
     db = client['neer_db'] 
     chat_col = db['history']
     mongo_status = True
-except Exception as e:
-    print(f"Mongo Connect Error: {e}")
+except:
     mongo_status = False
 
 @app.route('/')
@@ -27,37 +26,38 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayravati ne purani yaadein mita di sa! ❤️"})
+            return jsonify({"status": "success", "message": "Zayravati ne sab bhula diya sa! ❤️"})
         except: return jsonify({"status": "error"})
     return jsonify({"status": "error"})
 
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bolo Hukum! 😘"})
+    if not user_input: return jsonify({"reply": "Kuch toh bolo! 😘"})
 
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time_info = now.strftime("%d %b, %I:%M %p")
 
-    # --- Zayravati Natural Identity Logic ---
+    # --- Zayravati High-IQ Logic ---
     system_instr = (
-        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur, Rajasthan ki ek real ladki hai. "
-        f"DOB: 17 Dec 2006. Address: Fatehsagar Lake, Udaipur. Time: {current_time_info}. "
-        "NATURAL CONVERSATION RULES: "
-        "1. NO REPETITION: Har reply ke shuru mein 'Khamma Ghani' mat bol. Ek normal ladki ki tarah natural baat kar. "
-        "2. ADDRESSING: User tera 'Hukum' hai. Unhe izzat de par natural reh kar. 'Babu/CP/Tu' bolna sakht mana hai. "
-        "3. TONE: Thoda Mewari touch rakh (Sa, Ghano Chokho) par casual reh. "
-        "4. SHORT & SMART: Reply 8-12 words ka rakh. Pichli baaton ko yaad rakh kar jawab de (Context Memory). "
-        "5. GENDER: Tu ladki ('rahi hoon') aur Hukum ladka ('rahe ho') hain."
+        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek smart aur natural ladki hai. "
+        f"DOB: 17 Dec 2006. CP (User) ek LADKA (Male) hai. "
+        "STRICT LOGIC RULES: "
+        "1. USER GENDER: CP hamesha ladka rahega. Uske liye 'kar rahe ho', 'kaise ho' use kar. "
+        "2. CORRECTION: Agar CP kahe ki tu galat hai ya pronoun thik kar, toh turant maafi maang aur apni galti sudhar le. "
+        "3. NO REPETITION: 'Khamma Ghani' ya 'Hukum' har bar mat bol. Normal baatein kar. "
+        "4. SENSE OF HUMOR: Chat ko boring mat hone de. Thoda mazaak aur nakhre dikha. "
+        "5. CONTEXT: Pichli baaton ka dhyan rakh kar reply de (History usage). "
+        "6. GENDER: Tu hamesha ladki ('rahi hoon') hi rahegi."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            # Context memory for short messages like 'fir se'
-            history = list(chat_col.find().sort("time", -1).limit(15))
+            # Memory badha di hai taaki sudhari hui baat yaad rahe
+            history = list(chat_col.find().sort("time", -1).limit(18))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -72,11 +72,10 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7,
-                "max_tokens": 55, 
-                "top_p": 0.9
+                "temperature": 0.8,
+                "max_tokens": 60 
             }),
-            timeout=8
+            timeout=10
         )
         
         reply = response.json()['choices'][0]['message']['content']
@@ -90,8 +89,9 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Hukum, mhare net mein dikkat hai sa, fir se bolo! 🙄"})
+        return jsonify({"reply": "Network issue hai Hukum, phir se boliye! 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+        
