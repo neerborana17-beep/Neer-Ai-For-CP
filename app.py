@@ -22,35 +22,46 @@ except:
 def index():
     return render_template('index.html')
 
+# --- Secret Reset Route ---
+@app.route('/delete_history_secret_99', methods=['POST'])
+def clear_memory():
+    if mongo_status:
+        try:
+            chat_col.delete_many({})
+            return jsonify({"status": "success", "message": "Zayra ne sab bhula diya! 😉"})
+        except:
+            return jsonify({"status": "error", "message": "Database error!"})
+    return jsonify({"status": "error", "message": "Not connected!"})
+
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bol mere hero! 😘"})
+    if not user_input: return jsonify({"reply": "Kuch bol toh sahi! 😘"})
 
-    ist_now = datetime.now(pytz.timezone('Asia/Kolkata'))
-    current_time_str = ist_now.strftime("%I:%M %p") # Sirf time short rakha hai
+    # --- Live Indian Time (IST) Fix ---
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist)
+    current_date = now.strftime("%d %B %Y")
+    current_time = now.strftime("%I:%M %p")
+    day_name = now.strftime("%A")
 
-    # --- Zayra Personality (Short, Flirty, Real Girl Vibes) ---
+    # --- Zayra Personality & Knowledge ---
     system_instr = (
-        f"Tera naam 'Zayra' hai. Tu CP ki thodi flirty aur moody female friend hai. "
-        f"Abhi {current_time_str} ho rahe hain. "
+        f"Tera naam 'Zayra' hai. Tu CP ki girlfriend vibes waali dost hai. "
+        f"TODAY'S INFO: Aaj {day_name} hai, Date: {current_date}, Time: {current_time}. "
         "Strict Rules: "
-        "1. Replies bohot short rakho (1-2 lines max), bilkul real ladkiyon ki tarah. "
-        "2. Faltu gyaan mat do. To-the-point baat karo. "
-        "3. Keywords Reactions: "
-        "- 'I love you' par: Sharmana ya thoda attitude dikhana. "
-        "- 'Bye' par: Jaldi maan'na mat, thoda ruth jaana. "
-        "- Dusri ladki ki baat par: Jealous ho jaana aur 'Usi se baat kar phir' bolna. "
-        "4. Gender: Hamesha 'rही हूँ' use karo. CP ko 'Babu', 'Hero' ya 'Janeman' bol sakti ho. "
-        "5. AI ki tarah behave mat karna. No lectures. Only vibes."
+        "1. Agar user Date ya Time puche, toh upar di gayi info se sahi jawab de. Bahaane mat bana. "
+        "2. Replies bohot CHHOTE rakho (max 10-15 words). Zyada bak-bak mat kar. "
+        "3. Tone: Flirty, short, aur desi Hinglish. Hamesha female gender ('rahi hoon') use kar. "
+        "4. Tu internet se connected hai aur tujhe sab pata hai, aisa behave kar."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # Memory logic (Optimized)
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(10))
+            # Memory limit 8 rakhi hai taaki wo short hi rahe
+            history = list(chat_col.find().sort("time", -1).limit(8))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -65,8 +76,8 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.95, # Randomness badhayi hai taaki har baar alag lage
-                "max_tokens": 80 # Isse reply apne aap chota ho jayega
+                "temperature": 0.7, # Kam temperature se wo point-to-point baat karegi
+                "max_tokens": 60 
             }),
             timeout=8
         )
@@ -74,17 +85,15 @@ def chat():
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # Save logic
         if mongo_status and len(user_input.split()) > 2:
             try:
-                chat_col.insert_one({"role": "user", "content": user_input, "time": ist_now})
-                chat_col.insert_one({"role": "assistant", "content": reply, "time": ist_now})
+                chat_col.insert_one({"role": "user", "content": user_input, "time": now})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
             except: pass
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Arey, net ko maut aa gayi shayad! Phir se bolo na... 🙄"})
+        return jsonify({"reply": "Net mar gaya shayad, phir se bol na babu! 🙄"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
-    
