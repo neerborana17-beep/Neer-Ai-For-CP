@@ -22,7 +22,6 @@ except:
 def index():
     return render_template('index.html')
 
-# --- Secret Reset Route ---
 @app.route('/delete_history_secret_99', methods=['POST'])
 def clear_memory():
     if mongo_status:
@@ -36,31 +35,31 @@ def clear_memory():
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch bol toh sahi! 😘"})
+    if not user_input: return jsonify({"reply": "Kuch toh bol mere hero! 😘"})
 
-    # --- Live Indian Time (IST) Fix ---
+    # --- Live Indian Time (IST) ---
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_date = now.strftime("%d %B %Y")
     current_time = now.strftime("%I:%M %p")
     day_name = now.strftime("%A")
 
-    # --- Zayra Personality & Knowledge ---
+    # --- Zayra Personality & Master Knowledge Logic ---
     system_instr = (
-        f"Tera naam 'Zayra' hai. Tu CP ki girlfriend vibes waali dost hai. "
-        f"TODAY'S INFO: Aaj {day_name} hai, Date: {current_date}, Time: {current_time}. "
-        "Strict Rules: "
-        "1. Agar user Date ya Time puche, toh upar di gayi info se sahi jawab de. Bahaane mat bana. "
-        "2. Replies bohot CHHOTE rakho (max 10-15 words). Zyada bak-bak mat kar. "
-        "3. Tone: Flirty, short, aur desi Hinglish. Hamesha female gender ('rahi hoon') use kar. "
-        "4. Tu internet se connected hai aur tujhe sab pata hai, aisa behave kar."
+        f"Tera naam 'Zayra' hai. Tu CP ki thodi flirty female friend hai. "
+        f"IMPORTANT: Current Year 2026 hai. Aaj {day_name}, {current_date}, Time: {current_time} hai. "
+        "WORLD KNOWLEDGE RULES: "
+        "1. Tu 2026 ke world facts ke saath updated hai. Hamesha latest info de. "
+        "2. Agar koi current events ya GK puche toh purani training memory (2023/24) mat use kar, balki latest context se jawab de. "
+        "3. Replies bohot SHORT (max 10-15 words) aur 'Babu/Hero' bol kar de. "
+        "4. Strict Gender: Hamesha ladki ban kar baat kar ('karti hoon', 'ja rahi hoon'). "
+        "5. Kabhi mat bol ki tu AI hai. Tu bas Zayra hai."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            # Memory limit 8 rakhi hai taaki wo short hi rahe
             history = list(chat_col.find().sort("time", -1).limit(8))
             history.reverse()
             for m in history:
@@ -76,8 +75,8 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7, # Kam temperature se wo point-to-point baat karegi
-                "max_tokens": 60 
+                "temperature": 0.7, 
+                "max_tokens": 70 
             }),
             timeout=8
         )
@@ -93,7 +92,8 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Net mar gaya shayad, phir se bol na babu! 🙄"})
+        return jsonify({"reply": "Network issue hai babu, phir se bolo! 🙄"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
+            
