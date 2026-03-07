@@ -3,21 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Neer AI | Powered by CP</title>
+    <title>Zayra AI | Powered by CP</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --bg-color: #0b1120;
-            --glass-bg: rgba(17, 25, 40, 0.75);
-            --accent-color: #38bdf8;
+            --bg-color: #0f172a;
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --accent-color: #f472b6; /* Soft Pink Accent for Zayra */
             --text-color: #f8fafc;
-            --border-color: rgba(255, 255, 255, 0.08);
+            --border-color: rgba(244, 114, 182, 0.15);
         }
 
         body {
             font-family: 'Outfit', sans-serif;
             background-color: var(--bg-color);
-            background-image: radial-gradient(circle at 10% 20%, rgba(56, 189, 248, 0.1) 0%, rgba(0, 0, 0, 0) 40%);
+            background-image: radial-gradient(circle at 10% 20%, rgba(244, 114, 182, 0.1) 0%, rgba(0, 0, 0, 0) 40%);
             color: var(--text-color);
             margin: 0;
             display: flex;
@@ -37,7 +37,7 @@
             border-radius: 28px;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
             margin: 10px;
             overflow: hidden;
         }
@@ -48,12 +48,13 @@
             display: flex;
             flex-direction: column;
             gap: 2px;
+            background: rgba(244, 114, 182, 0.05);
         }
 
         .powered-by {
             font-size: 0.65rem;
             letter-spacing: 1.5px;
-            color: rgba(255, 255, 255, 0.5);
+            color: rgba(244, 114, 182, 0.6);
             font-weight: 300;
             text-transform: uppercase;
         }
@@ -63,23 +64,22 @@
             margin: 0;
             font-weight: 600;
             color: white;
-            text-align: left;
+            text-shadow: 0 0 10px rgba(244, 114, 182, 0.3);
         }
 
         .status-dot {
             height: 8px;
             width: 8px;
-            background-color: #10b981;
+            background-color: #f472b6;
             border-radius: 50%;
             display: inline-block;
             margin-right: 6px;
-            box-shadow: 0 0 10px #10b981;
+            box-shadow: 0 0 10px #f472b6;
         }
 
         .online-status {
             font-size: 0.8rem;
             color: rgba(255, 255, 255, 0.7);
-            font-weight: 400;
             display: flex;
             align-items: center;
         }
@@ -94,23 +94,21 @@
             scroll-behavior: smooth;
         }
 
-        /* Message Bubbles */
         .message {
             max-width: 80%;
             padding: 14px 18px;
             border-radius: 20px;
             font-size: 0.95rem;
             line-height: 1.5;
-            position: relative;
             animation: fadeInSlide 0.4s ease;
         }
 
         .user-message {
             align-self: flex-end;
             background: var(--accent-color);
-            color: #001122;
+            color: #4c0519;
             border-bottom-right-radius: 5px;
-            box-shadow: 0 4px 15px rgba(56, 189, 248, 0.3);
+            box-shadow: 0 4px 15px rgba(244, 114, 182, 0.3);
         }
 
         .ai-message {
@@ -121,20 +119,20 @@
             border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
-        /* Typing Indicator with Dots */
         .typing-container {
             align-self: flex-start;
             font-size: 0.85rem;
-            color: rgba(255, 255, 255, 0.6);
-            margin-left: 10px;
+            color: var(--accent-color);
+            margin: 0 0 15px 25px;
             display: none;
+            font-weight: 300;
         }
 
         .dot {
             display: inline-block;
             width: 4px;
             height: 4px;
-            background-color: rgba(255, 255, 255, 0.6);
+            background-color: var(--accent-color);
             border-radius: 50%;
             margin-left: 2px;
             animation: dotFlashing 1s infinite alternate;
@@ -147,74 +145,64 @@
             padding: 20px 25px;
             display: flex;
             gap: 12px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.2);
             border-top: 1px solid var(--border-color);
         }
 
         input {
             flex: 1;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(244, 114, 182, 0.1);
             padding: 14px 18px;
             border-radius: 14px;
             color: white;
-            font-size: 0.95rem;
             outline: none;
-            transition: border-color 0.2s;
         }
 
         input:focus { border-color: var(--accent-color); }
 
         button {
             background: var(--accent-color);
-            color: #001122;
+            color: #4c0519;
             border: none;
             padding: 0 24px;
             border-radius: 14px;
             font-weight: 600;
-            font-size: 0.95rem;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
-        button:hover { opacity: 0.9; }
-        button:active { transform: scale(0.96); }
-
-        /* Animations */
         @keyframes fadeInSlide {
-            from { opacity: 0; transform: translateY(15px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
         @keyframes dotFlashing {
-            0% { background-color: rgba(255, 255, 255, 0.6); }
-            50%, 100% { background-color: rgba(255, 255, 255, 0.1); }
+            0% { opacity: 0.3; }
+            100% { opacity: 1; }
         }
 
-        /* Scrollbar */
-        #chat-box::-webkit-scrollbar { width: 5px; }
-        #chat-box::-webkit-scrollbar-track { background: transparent; }
-        #chat-box::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 5px; }
-
+        #chat-box::-webkit-scrollbar { width: 4px; }
+        #chat-box::-webkit-scrollbar-thumb { background: rgba(244, 114, 182, 0.2); border-radius: 10px; }
     </style>
 </head>
 <body>
     <div class="chat-container">
         <div class="header">
             <div class="powered-by">POWERED BY CP</div>
-            <h1>Neer</h1>
-            <div class="online-status"><span class="status-dot"></span>online</div>
+            <h1>Zayra</h1>
+            <div class="online-status"><span class="status-dot"></span>Active now</div>
         </div>
         
         <div id="chat-box">
-            </div>
+            <div class="message ai-message">Hey! Zayra here.. Kahan gayab ho itni der se? 😘</div>
+        </div>
         
         <div id="typing-indicator" class="typing-container">
-            Neer is typing<span class="dot"></span><span class="dot"></span><span class="dot"></span>
+            Zayra is typing<span class="dot"></span><span class="dot"></span><span class="dot"></span>
         </div>
         
         <div class="input-area">
-            <input type="text" id="user-input" placeholder="Oye, kuch bol..." onkeypress="if(event.key==='Enter') sendMessage()">
+            <input type="text" id="user-input" placeholder="Zayra se kuch pucho..." onkeypress="if(event.key==='Enter') sendMessage()">
             <button onclick="sendMessage()">Send</button>
         </div>
     </div>
@@ -224,11 +212,9 @@
         const userInput = document.getElementById('user-input');
         const typingIndicator = document.getElementById('typing-indicator');
 
-        // Function to safely add a message to the chat box
         function addMessage(text, isUser) {
-            const messageClass = isUser ? 'user-message' : 'ai-message';
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${messageClass}`;
+            messageDiv.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
             messageDiv.textContent = text;
             chatBox.appendChild(messageDiv);
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -238,38 +224,29 @@
             const msg = userInput.value.trim();
             if(!msg) return;
 
-            // 1. Add user message
             addMessage(msg, true);
             userInput.value = '';
 
-            // 2. Show thinking indicator
             typingIndicator.style.display = 'block';
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
-                // 3. API Call to Flask backend
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({message: msg})
                 });
                 
-                if (!response.ok) throw new Error('API Network Error');
-                
                 const data = await response.json();
-                
-                // 4. Hide indicator and add AI reply
                 typingIndicator.style.display = 'none';
                 addMessage(data.reply, false);
                 
             } catch (e) {
-                // Handle errors gracefully
                 typingIndicator.style.display = 'none';
-                addMessage("Bhai, net hag gaya shayad! Ek baar phir koshish kar. 😂", false);
-                console.error(e);
+                addMessage("Babu, lagta hai network nakhre kar raha hai. 🙄", false);
             }
         }
     </script>
 </body>
-                </html>
-                
+    </html>
+    
