@@ -1,4 +1,4 @@
 flask
+pymongo
 requests
-gunicorn
-pymongo[srv]
+pytz
