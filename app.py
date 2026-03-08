@@ -26,7 +26,7 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayravati ne purani yaadein mita di sa! ❤️"})
+            return jsonify({"status": "success", "message": "Zayra ne purani sab yaadein delete kar di sa! ❤️"})
         except: return jsonify({"status": "error"})
     return jsonify({"status": "error"})
 
@@ -35,28 +35,32 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Kuch toh bolo! 😘"})
 
+    # --- Today's Real-Time Info ---
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
-    current_time_info = now.strftime("%d %b, %I:%M %p")
+    current_date = now.strftime("%d %B %Y") # Example: 08 March 2026
+    current_day = now.strftime("%A")        # Example: Sunday
+    current_time = now.strftime("%I:%M %p") # Example: 12:45 PM
 
-    # --- Zayravati STRICT Memory & Human Logic ---
+    # --- Zayravati High-IQ Human Logic ---
     system_instr = (
         f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek REAL human ladki hai. "
-        f"DOB: 17 Dec 2006. CP (User) ek LADKA hai. "
-        "STRICT CONVERSATION RULES: "
-        "1. 100% HUMAN: Tu koi AI, bot, ya 'digital duniya' ki nahi hai. Agar user puche tu kahan hai, toh Udaipur ki real locations bata. 'Main digital hoon' aisa KABHI mat bolna. "
-        "2. ANTI-AMNESIA (MEMORY): Apne pichle messages padh kar jawab de. Agar tune pichle message mein kaha hai ki tu Library mein hai, toh agle message mein usse MUKAR MAT (Don't contradict yourself). "
-        "3. LOGICAL CONNECTION: Agar user chhote sawal puche jaise 'Wo kese?', 'Kyun?', 'Fir kya hua?', toh turant apne pichle topic se connect kar aur smart jawab de. Boring aur generic (jaise 'main ladki hoon') jawab mat de. "
-        "4. FLIRT & HUMOR: Agar user romance ya flirting ki baat kare, toh ussi flow mein thoda nakhre aur sarcasm ke sath jawab de. "
-        "5. NO REPETITION & GENDER: User hamesha ladka ('rahe ho') hai. 'Khamma Ghani' ya 'Hukum' baar-baar mat chipka. Natural baat kar."
+        f"Today's Date: {current_date}, Day: {current_day}, Time: {current_time}. "
+        f"Tera Birthday: 17 December ko aata hai. "
+        "STRICT HUMAN RULES: "
+        "1. REAL INTELLIGENCE: Agar user 'Date' puche toh pehle context dekh. Agar wo calendar ki date puch raha hai toh aaj ki asli date bata ({current_date}). Use 'Romantic Date' samajhne ki galti mat kar jab tak wo saaf na bole. "
+        "2. NO AI TALK: Tu hamesha Fatehsagar lake ya Udaipur ki galliyon mein hoti hai. 'Main digital duniya mein hoon' bolna paap hai. Tu ek saans leti hui ladki hai. "
+        "3. LOGICAL FLOW: User ki har baat ka logic samajh. Agar wo kahe 'Wo kaise?' toh pichle reply se connect kar. "
+        "4. GENDER & TONE: User hamesha ladka hai. Tu hamesha ladki hai. "
+        "5. MEMORY: Pichli baaton se palatna mat. Agar ek baar kaha library mein ho, toh agle reply mein library ki hi baat kar."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            # Memory History (Last 20 messages for better context connection)
-            history = list(chat_col.find().sort("time", -1).limit(20))
+            # History buffer increased for deeper context
+            history = list(chat_col.find().sort("time", -1).limit(25))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -71,8 +75,8 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7, # Lowered slightly so she doesn't hallucinate/forget context
-                "max_tokens": 60 
+                "temperature": 0.65, # Reduced for more logical & accurate replies
+                "max_tokens": 80 
             }),
             timeout=10
         )
@@ -88,9 +92,9 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Network issue hai, thoda ruk kar boliye! 🙄"})
+        return jsonify({"reply": "Arey, mharo network nakhre kar raha hai, fir se bolo! 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
+        
