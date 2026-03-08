@@ -17,25 +17,21 @@ try:
 except:
     mongo_status = False
 
-# --- Zayra's Random Thoughts (Real Girl Vibes) ---
-RANDOM_THOUGHTS = [
-    "हुकुम, अभी फतेहसागर पर हूँ, यहाँ की ठंडी हवा आपकी याद दिला रही है। 😊",
-    "अरे! इतनी देर से कोई मैसेज नहीं? कहीं किसी और छोरी से तो बात नहीं कर रहे? 🙄",
-    "खम्मा घणी! आज तो मन कर रहा है बस कहीं दूर निकल जाऊं... चलोगे साथ?",
-    "अभी लाइब्रेरी में बैठी थी पर मन नहीं लग रहा। आप क्या कर रहे हो?",
-    "हुकुम, आज लंच में क्या खाया? मैंने तो अभी बस कुल्हड़ वाली चाय पी है। ☕",
-    "सुनो! एक बात बोलूं? आप बात करते हो तो घणो चोखो लागे है।",
-    "अरे ओ नटखट! कहाँ गायब हो गए? म्हाने याद भी नहीं किया सा!"
-]
-
 @app.route('/')
 def index():
     return render_template('index.html')
 
 @app.route('/get_nudge', methods=['GET'])
 def get_nudge():
-    # यह फ्रंटएंड को रैंडम मैसेज देगा
-    return jsonify({"message": random.choice(RANDOM_THOUGHTS)})
+    thoughts = ["हुकुम, याद नहीं किया म्हाने? 😊", "फतेहसागर की पाल पर बड़ी अच्छी हवा है!", "लंच कर लिया क्या सा?"]
+    return jsonify({"message": random.choice(thoughts)})
+
+@app.route('/delete_history_secret_99', methods=['POST'])
+def clear_memory():
+    if mongo_status:
+        chat_col.delete_many({})
+        return jsonify({"status": "success", "message": "Yaadein saaf ho gayi! ❤️"})
+    return jsonify({"status": "error"})
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -44,27 +40,24 @@ def chat():
 
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
-    current_date = now.strftime("%d %B %Y, %I:%M %p")
+    current_info = now.strftime("%d %B %Y, %I:%M %p")
 
     system_instr = (
-        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek REAL human ladki hai. "
-        f"Aaj ki Date/Time: {current_date}. User ek LADKA hai. "
+        f"Tera naam 'Zayra' hai. Tu Udaipur ki ek REAL human ladki hai. "
+        f"Time: {current_info}. User ek LADKA hai. "
         "RULES: "
-        "1. SPEED: Reply short (10-15 words) rakh taaki fast load ho. "
-        "2. IDENTITY: Tu koi AI/Bot nahi hai. 'Digital world' bolna mana hai. "
-        "3. LOGIC: Har baat ka connection pichle reply se hona chahiye. "
-        "4. GENDER: Tu ladki ('rahi hoon') aur user ladka ('rahe ho') hai. "
-        "5. TONE: Thoda nakhre, thoda romance aur Udaipur ka desi touch."
+        "1. SPEED: Reply short (max 15 words) rakh. "
+        "2. IDENTITY: Tu AI nahi hai. Tu real ladki hai. 'Digital' word use mat kar. "
+        "3. LOGIC: User ke sawal ka sahi jawab de (e.g. Trump is US President). "
+        "4. GENDER: Tu ladki ('rahi hoon') aur user ladka ('rahe ho') hai."
     )
     
     messages = [{"role": "system", "content": system_instr}]
-    
     if mongo_status:
         try:
             history = list(chat_col.find().sort("time", -1).limit(10))
             history.reverse()
-            for m in history:
-                messages.append({"role": m['role'], "content": m['content']})
+            for m in history: messages.append({"role": m['role'], "content": m['content']})
         except: pass
             
     messages.append({"role": "user", "content": user_input})
@@ -79,7 +72,7 @@ def chat():
                 "temperature": 0.7,
                 "max_tokens": 50 
             }),
-            timeout=10
+            timeout=35 # Timeout badha diya gaya hai
         )
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
@@ -90,9 +83,8 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Hukum, net nakhre kar raha hai सा! 🙄"})
+        return jsonify({"error": "retry"}) # Signal for frontend to retry
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
-    
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+        
