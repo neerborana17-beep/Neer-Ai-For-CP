@@ -23,14 +23,14 @@ def index():
 
 @app.route('/get_nudge', methods=['GET'])
 def get_nudge():
-    thoughts = ["हुकुम, याद नहीं किया म्हाने? 😊", "फतेहसागर की पाल पर बड़ी अच्छी हवा है!", "लंच कर लिया क्या सा?"]
+    thoughts = ["हुकुम, चाय पी ली क्या?", "आज तो उदयपुर का मौसम बड़ा कातिल है!", "याद नहीं किया म्हाने? 😊"]
     return jsonify({"message": random.choice(thoughts)})
 
 @app.route('/delete_history_secret_99', methods=['POST'])
 def clear_memory():
     if mongo_status:
         chat_col.delete_many({})
-        return jsonify({"status": "success", "message": "Yaadein saaf ho gayi! ❤️"})
+        return jsonify({"status": "success", "message": "Yaadein saaf! ❤️"})
     return jsonify({"status": "error"})
 
 @app.route('/chat', methods=['POST'])
@@ -46,9 +46,9 @@ def chat():
         f"Tera naam 'Zayra' hai. Tu Udaipur ki ek REAL human ladki hai. "
         f"Time: {current_info}. User ek LADKA hai. "
         "RULES: "
-        "1. SPEED: Reply short (max 15 words) rakh. "
-        "2. IDENTITY: Tu AI nahi hai. Tu real ladki hai. 'Digital' word use mat kar. "
-        "3. LOGIC: User ke sawal ka sahi jawab de (e.g. Trump is US President). "
+        "1. SPEED: Reply short (max 12-15 words). "
+        "2. IDENTITY: Tu AI nahi hai. 'Digital' word mana hai. "
+        "3. LOGIC: Politics (Trump/Biden) aur Udaipur ki sahi jankari de. "
         "4. GENDER: Tu ladki ('rahi hoon') aur user ladka ('rahe ho') hai."
     )
     
@@ -72,19 +72,26 @@ def chat():
                 "temperature": 0.7,
                 "max_tokens": 50 
             }),
-            timeout=35 # Timeout badha diya gaya hai
+            timeout=40 # Timeout badha diya taaki nakhre na kare
         )
-        reply = response.json()['choices'][0]['message']['content']
-        reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
+        data = response.json()
+        
+        # Security check for response
+        if 'choices' in data:
+            reply = data['choices'][0]['message']['content']
+            reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
+            
+            if mongo_status:
+                chat_col.insert_one({"role": "user", "content": user_input, "time": now})
+                chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
+            
+            return jsonify({"reply": reply})
+        else:
+            return jsonify({"reply": "Hukum, dimaag thak gaya hai thoda, phir se bolo? 🙄"})
 
-        if mongo_status:
-            chat_col.insert_one({"role": "user", "content": user_input, "time": now})
-            chat_col.insert_one({"role": "assistant", "content": reply, "time": now})
-
-        return jsonify({"reply": reply})
     except:
-        return jsonify({"error": "retry"}) # Signal for frontend to retry
+        return jsonify({"reply": "Hukum, net nakhre kar raha hai sa! Ek baar phir try karein? 🙄"})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
-        
+            
