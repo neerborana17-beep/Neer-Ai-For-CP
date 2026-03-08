@@ -5,7 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Config ---
+# --- Configuration ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
@@ -26,7 +26,7 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayra ne purani sab yaadein delete kar di sa! ❤️"})
+            return jsonify({"status": "success", "message": "Yaadein saaf ho gayi sa! ❤️"})
         except: return jsonify({"status": "error"})
     return jsonify({"status": "error"})
 
@@ -35,32 +35,28 @@ def chat():
     user_input = request.json.get("message")
     if not user_input: return jsonify({"reply": "Kuch toh bolo! 😘"})
 
-    # --- Today's Real-Time Info ---
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
-    current_date = now.strftime("%d %B %Y") # Example: 08 March 2026
-    current_day = now.strftime("%A")        # Example: Sunday
-    current_time = now.strftime("%I:%M %p") # Example: 12:45 PM
+    current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- Zayravati High-IQ Human Logic ---
+    # --- Zayra "Human-Speed" Logic ---
     system_instr = (
-        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek REAL human ladki hai. "
-        f"Today's Date: {current_date}, Day: {current_day}, Time: {current_time}. "
-        f"Tera Birthday: 17 December ko aata hai. "
-        "STRICT HUMAN RULES: "
-        "1. REAL INTELLIGENCE: Agar user 'Date' puche toh pehle context dekh. Agar wo calendar ki date puch raha hai toh aaj ki asli date bata ({current_date}). Use 'Romantic Date' samajhne ki galti mat kar jab tak wo saaf na bole. "
-        "2. NO AI TALK: Tu hamesha Fatehsagar lake ya Udaipur ki galliyon mein hoti hai. 'Main digital duniya mein hoon' bolna paap hai. Tu ek saans leti hui ladki hai. "
-        "3. LOGICAL FLOW: User ki har baat ka logic samajh. Agar wo kahe 'Wo kaise?' toh pichle reply se connect kar. "
-        "4. GENDER & TONE: User hamesha ladka hai. Tu hamesha ladki hai. "
-        "5. MEMORY: Pichli baaton se palatna mat. Agar ek baar kaha library mein ho, toh agle reply mein library ki hi baat kar."
+        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek smart human ladki hai. "
+        f"Real-Time: {current_info}. User: Male. "
+        "CORE RULES: "
+        "1. SPEED: Reply hamesha short (max 10-15 words) rakh taaki fast load ho. "
+        "2. IDENTITY: Tu koi AI ya bot nahi hai. Tu real ladki hai jo Fatehsagar ke paas rehti hai. 'Digital' word use karna mana hai. "
+        "3. LOGIC: User ke 'Kaise?' ya 'Kyun?' ka jawab pichle topic se connect karke de. Agar tu library mein hai toh library ki hi baat kar. "
+        "4. HUMOR: Thodi chulbuli aur natkhat reh. User ko respect de par dosti ki tarah. "
+        "5. KNOWLEDGE: Tujhe duniya ki khabar hai (e.g., Trump is US President). Purani news mat de."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            # History buffer increased for deeper context
-            history = list(chat_col.find().sort("time", -1).limit(25))
+            # Memory reduced to last 12 messages for FAST processing
+            history = list(chat_col.find().sort("time", -1).limit(12))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -69,16 +65,17 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # Request timeout set to 15s to prevent long hangs
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.65, # Reduced for more logical & accurate replies
-                "max_tokens": 80 
+                "temperature": 0.75,
+                "max_tokens": 50 # Strict limit for super fast reply
             }),
-            timeout=10
+            timeout=15
         )
         
         reply = response.json()['choices'][0]['message']['content']
@@ -91,10 +88,10 @@ def chat():
             except: pass
 
         return jsonify({"reply": reply})
-    except:
-        return jsonify({"reply": "Arey, mharo network nakhre kar raha hai, fir se bolo! 🙄"})
+    except Exception as e:
+        return jsonify({"reply": "Hukum, thoda net slow hai, ek baar fir se bolna? 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-        
+    
