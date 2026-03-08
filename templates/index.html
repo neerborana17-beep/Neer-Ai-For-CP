@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,65 +7,65 @@
     <title>Zayravati - Udaipur</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        /* Royal Theme & Smooth UI */
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; }
-        #header { background: #8e2de2; background: linear-gradient(to right, #4a00e0, #8e2de2); color: white; padding: 15px; text-align: center; font-size: 1.2rem; font-weight: bold; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; }
-        .msg { max-width: 80%; padding: 12px 16px; border-radius: 18px; line-height: 1.4; font-size: 0.95rem; position: relative; }
+        
+        /* --- New Left-Aligned Header --- */
+        #header { background: linear-gradient(to right, #4a00e0, #8e2de2); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        #header-left { display: flex; flex-direction: column; }
+        #bot-name { font-size: 1.2rem; font-weight: bold; }
+        #status-area { display: flex; align-items: center; font-size: 0.75rem; opacity: 0.9; margin-top: 2px; }
+        .status-dot { height: 8px; width: 8px; background-color: #2ecc71; border-radius: 50%; display: inline-block; margin-right: 5px; }
+        
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 15px; background: #fafafa; }
+        .msg { max-width: 80%; padding: 12px 16px; border-radius: 18px; line-height: 1.4; font-size: 0.95rem; }
         .user { align-self: flex-end; background: #8e2de2; color: white; border-bottom-right-radius: 2px; }
         .bot { align-self: flex-start; background: white; color: #333; border-bottom-left-radius: 2px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* --- Typing Indicator CSS --- */
+        #typing-indicator { display: none; align-self: flex-start; background: #e0e0e0; color: #555; border-radius: 18px; padding: 10px 15px; font-size: 0.8rem; border-bottom-left-radius: 2px; }
+        .dot { height: 6px; width: 6px; background: #888; border-radius: 50%; display: inline-block; animation: blink 1.4s infinite both; }
+        .dot:nth-child(2) { animation-delay: 0.2s; }
+        .dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes blink { 0%, 80%, 100% { opacity: 0; } 40% { opacity: 1; } }
+
         #input-area { background: white; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #ddd; }
         input { flex: 1; border: 1px solid #ccc; padding: 12px; border-radius: 25px; outline: none; }
         button { background: #4a00e0; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer; transition: 0.3s; }
         button:hover { opacity: 0.8; }
-        #reset-btn { background: #ff4b2b; position: absolute; top: 15px; right: 15px; padding: 5px 10px; font-size: 0.7rem; }
+        #reset-btn { background: #ff4b2b; color: white; border: none; padding: 5px 12px; font-size: 0.8rem; border-radius: 15px; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div id="header">
-        Zayravati (Zayra)
+        <div id="header-left">
+            <div id="bot-name">Zayravati (Zayra)</div>
+            <div id="status-area"><span class="status-dot"></span> Active now</div>
+        </div>
         <button id="reset-btn" onclick="clearChat()">🗑️ Reset</button>
     </div>
 
-    <div id="chat-box"></div>
+    <div id="chat-box">
+        <div class="msg bot">Khamma Ghani Hukum! Zayra here.. Kahan gayab ho itni der se? 😘</div>
+    </div>
+
+    <div id="typing-indicator">
+        Zayra is thinking
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+    </div>
 
     <div id="input-area">
-        <input type="text" id="user-msg" placeholder="Say something to Zayra..." onkeypress="handleKey(event)">
+        <input type="text" id="user-msg" placeholder="Zayra se kuch pucho..." onkeypress="handleKey(event)">
         <button onclick="sendMsg()"><i class="fa-solid fa-paper-plane"></i></button>
     </div>
 
     <script>
         const chatBox = document.getElementById('chat-box');
+        const typingIndicator = document.getElementById('typing-indicator');
 
-        // 1. Notification Permission
-        if (Notification.permission !== "granted") {
-            Notification.requestPermission();
-        }
-
-        // 2. Random Nudge System (Zayra's own messages)
-        function checkZayraNudge() {
-            fetch('/get_nudge')
-                .then(res => res.json())
-                .then(data => {
-                    if (Notification.permission === "granted") {
-                        const n = new Notification("Zayra 💖", {
-                            body: data.message,
-                            icon: "https://cdn-icons-png.flaticon.com/512/4140/4140047.png" // Placeholder icon
-                        });
-                        // Notification click se app open ho jaye
-                        n.onclick = () => { window.focus(); };
-                    }
-                    // Screen par bhi dikhe
-                    appendMsg(data.message, 'bot');
-                });
-        }
-
-        // Random interval (Har 15-40 minutes ke beech mein ek bar)
-        let randomTime = Math.floor(Math.random() * (2400000 - 900000 + 1)) + 900000;
-        setInterval(checkZayraNudge, randomTime);
-
-        // 3. Main Chat Functions
+        // Main Chat Functions
         function handleKey(e) { if(e.key === 'Enter') sendMsg(); }
 
         function appendMsg(text, sender) {
@@ -80,19 +81,32 @@
             const msg = input.value.trim();
             if(!msg) return;
 
+            // 1. Show User Message
             appendMsg(msg, 'user');
             input.value = '';
 
+            // 2. Show Typing Indicator
+            typingIndicator.style.display = 'block';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
             try {
+                // Time delay to simulate "thinking" on Render free tier
+                await new Promise(r => setTimeout(r, 500)); 
+
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({message: msg})
                 });
                 const data = await res.json();
+
+                // 3. Hide Typing and Show Bot Reply
+                typingIndicator.style.display = 'none';
                 appendMsg(data.reply, 'bot');
             } catch (e) {
-                appendMsg("Network nakhre kar raha hai sa! 🙄", 'bot');
+                // Handle Error case
+                typingIndicator.style.display = 'none';
+                appendMsg("Hukum, net nakhre kar raha hai sa! 🙄 (Server wake up ho raha hai, thoda ruk kar try karein)", 'bot');
             }
         }
 
@@ -105,5 +119,4 @@
         }
     </script>
 </body>
-    </html>
-    
+</html>
