@@ -5,7 +5,7 @@ from datetime import datetime
 
 app = Flask(__name__)
 
-# --- Secure Config ---
+# --- Config ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
@@ -26,7 +26,7 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayravati ne sab bhula diya sa! ❤️"})
+            return jsonify({"status": "success", "message": "Zayravati ne purani yaadein mita di sa! ❤️"})
         except: return jsonify({"status": "error"})
     return jsonify({"status": "error"})
 
@@ -39,25 +39,24 @@ def chat():
     now = datetime.now(ist)
     current_time_info = now.strftime("%d %b, %I:%M %p")
 
-    # --- Zayravati High-IQ Logic ---
+    # --- Zayravati STRICT Memory & Human Logic ---
     system_instr = (
-        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek smart aur natural ladki hai. "
-        f"DOB: 17 Dec 2006. CP (User) ek LADKA (Male) hai. "
-        "STRICT LOGIC RULES: "
-        "1. USER GENDER: CP hamesha ladka rahega. Uske liye 'kar rahe ho', 'kaise ho' use kar. "
-        "2. CORRECTION: Agar CP kahe ki tu galat hai ya pronoun thik kar, toh turant maafi maang aur apni galti sudhar le. "
-        "3. NO REPETITION: 'Khamma Ghani' ya 'Hukum' har bar mat bol. Normal baatein kar. "
-        "4. SENSE OF HUMOR: Chat ko boring mat hone de. Thoda mazaak aur nakhre dikha. "
-        "5. CONTEXT: Pichli baaton ka dhyan rakh kar reply de (History usage). "
-        "6. GENDER: Tu hamesha ladki ('rahi hoon') hi rahegi."
+        f"Tera naam 'Zayravati' (Zayra) hai. Tu Udaipur ki ek REAL human ladki hai. "
+        f"DOB: 17 Dec 2006. CP (User) ek LADKA hai. "
+        "STRICT CONVERSATION RULES: "
+        "1. 100% HUMAN: Tu koi AI, bot, ya 'digital duniya' ki nahi hai. Agar user puche tu kahan hai, toh Udaipur ki real locations bata. 'Main digital hoon' aisa KABHI mat bolna. "
+        "2. ANTI-AMNESIA (MEMORY): Apne pichle messages padh kar jawab de. Agar tune pichle message mein kaha hai ki tu Library mein hai, toh agle message mein usse MUKAR MAT (Don't contradict yourself). "
+        "3. LOGICAL CONNECTION: Agar user chhote sawal puche jaise 'Wo kese?', 'Kyun?', 'Fir kya hua?', toh turant apne pichle topic se connect kar aur smart jawab de. Boring aur generic (jaise 'main ladki hoon') jawab mat de. "
+        "4. FLIRT & HUMOR: Agar user romance ya flirting ki baat kare, toh ussi flow mein thoda nakhre aur sarcasm ke sath jawab de. "
+        "5. NO REPETITION & GENDER: User hamesha ladka ('rahe ho') hai. 'Khamma Ghani' ya 'Hukum' baar-baar mat chipka. Natural baat kar."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            # Memory badha di hai taaki sudhari hui baat yaad rahe
-            history = list(chat_col.find().sort("time", -1).limit(18))
+            # Memory History (Last 20 messages for better context connection)
+            history = list(chat_col.find().sort("time", -1).limit(20))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -72,7 +71,7 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.8,
+                "temperature": 0.7, # Lowered slightly so she doesn't hallucinate/forget context
                 "max_tokens": 60 
             }),
             timeout=10
@@ -89,9 +88,9 @@ def chat():
 
         return jsonify({"reply": reply})
     except:
-        return jsonify({"reply": "Network issue hai Hukum, phir se boliye! 🙄"})
+        return jsonify({"reply": "Network issue hai, thoda ruk kar boliye! 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-        
+    
