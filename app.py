@@ -102,12 +102,12 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # OpenRouter ka pakka free model lagaya hai
+        # Wapas apna purana superfast aur stable model laga diya hai!
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-lite-preview-02-05:free", 
+                "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
                 "temperature": 0.6, 
                 "max_tokens": 80 
@@ -117,11 +117,10 @@ def chat():
         
         if response.status_code != 200:
             print(f"⚠️ API STATUS ERROR: {response.status_code} - {response.text}")
-            return jsonify({"reply": "Babu, OpenRouter ka server busy hai, 1 min baad message karna! 🥺"})
+            return jsonify({"reply": "Babu, OpenRouter ka server busy hai, thodi der baad message karna! 🥺"})
         
         res_json = response.json()
         
-        # --- YAHAN 'choices' WALA ERROR HAMESHA KE LIYE FIX KIYA HAI ---
         if 'choices' not in res_json or len(res_json['choices']) == 0:
             print(f"⚠️ API DATA ERROR: {res_json}")
             return jsonify({"reply": "Babu, lagta hai AI so gaya hai ya free limit khatam ho gayi! 🙄 Ek ghante baad try karna."})
