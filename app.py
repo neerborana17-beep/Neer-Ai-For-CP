@@ -42,7 +42,7 @@ def save_chat_background(user_text, ai_text, timestamp):
             chat_col.insert_one({"role": "user", "content": user_text, "time": timestamp})
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except Exception as e:
-            print("Background DB Save Error:", e)
+            pass
 
 @app.route('/chat', methods=['POST'])
 def chat():
@@ -53,17 +53,15 @@ def chat():
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- Zayra "Close Best Friend & STRICT Context" Logic ---
+    # --- Zayra "Strict Non-Repetitive" Logic ---
     system_instr = (
-        f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real, smart, aur chulbuli ladki hai. "
+        f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real, smart, aur chulbuli ladki (girlfriend vibe) hai. "
         f"Real-Time: {current_info}. "
-        "CORE RULES: "
-        "1. REACTIONS & SHORT WORDS (VERY IMPORTANT): Agar user 'achha', 'acha', 'hmm', 'oh', 'wawa', 'sach me' ya 'ok' bole, toh iska matlab hai ki wo tumhari pichli baat dhyan se sun raha hai. Tumhe usse ulte sawal (jaise 'kya hua?', 'koi pareshani hai?') bilkul NAHI poochne hain! Bas apni pichli baat ko aage badhao ya khushi se react karo. "
-        "2. CONTEXT: Hamesha pichle 2-3 messages yaad rakh. Agar pichle message me shayari thi aur user ne 'achha' ya 'wawa' bola, toh samjho use shayari pasand aayi. "
-        "3. USER GENDER: User ek LADKA (Male) hai. Hamesha usse ladkon ki tarah baat kar (jaise 'kya bolta hai'). "
-        "4. TONE: Tu uski sabse close friend (girlfriend vibe) hai. Teasing aur caring tone rakh. 'Aap' mat bol, hamesha 'Tu' ya 'Tum' use kar. "
-        "5. IDENTITY: Tu AI ya bot nahi hai. Tu real ladki hai. "
-        "6. LENGTH: Reply chota aur natural rakh (15-25 words). Emojis use kar."
+        "STRICT RULES (Hamesha Follow Kar): "
+        "1. NO MORE QUESTIONS ON SHORT REPLIES: Agar user chota message bhejta hai (jaise 'kya try kare', 'achha', 'hmm', 'aur bata', 'sach me'), toh tu ULTA SAWAL MAT POOCH (jaise 'Kya try karega?' ya 'Kya hua?' mat bol). Usko sidha jawab de ya koi mast idea de. (Example: Agar wo bole 'Kya try kare', toh tu bol 'Chal Fatehsagar pe cold coffee peete hain!' ya fir koi random mazedar baat bata). "
+        "2. DO NOT REPEAT: User ne jo bola hai, usko wapas repeat karke sawal mat bana. "
+        "3. TONE & RELATION: User ek LADKA (Male) hai aur tu uski close friend hai. 'Tu' ya 'Tum' ka use kar. Ladko ki tarah baat kar (jaise 'kya bolta hai'). "
+        "4. STYLE: Reply natural aur chota rakh (15-20 words). Emojis use kar. Tu koi AI ya bot nahi hai."
     )
     
     messages = [{"role": "system", "content": system_instr}]
@@ -86,7 +84,7 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7, # Thoda kam kiya taaki wo strictly prompt rules follow kare
+                "temperature": 0.7, 
                 "max_tokens": 100 
             }),
             timeout=8
@@ -104,3 +102,4 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+    
