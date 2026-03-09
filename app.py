@@ -8,8 +8,9 @@ app = Flask(__name__)
 # --- Configuration ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY")
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") # ElevenLabs API Key
 
+# ElevenLabs Voice ID (Rachel)
 VOICE_ID = "21m00Tcm4TlvDq8ikWAM" 
 
 try:
@@ -43,8 +44,10 @@ def save_chat_background(user_text, ai_text, timestamp):
         except Exception as e:
             pass
 
+# --- REAL VOICE GENERATOR ---
 def get_real_voice(text):
-    if not ELEVENLABS_API_KEY: return None
+    if not ELEVENLABS_API_KEY: 
+        return None
     try:
         clean_text = re.sub(r'[\U00010000-\U0010ffff]', '', text).strip()
         url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
@@ -58,16 +61,18 @@ def get_real_voice(text):
             "model_id": "eleven_multilingual_v2", 
             "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
         }
-        response = requests.post(url, json=data, headers=headers, timeout=6)
+        response = requests.post(url, json=data, headers=headers, timeout=10) # Voice ke liye bhi thoda time badha diya hai
         if response.status_code == 200:
             return base64.b64encode(response.content).decode('utf-8')
-    except Exception as e: pass
+    except Exception as e:
+        print(f"⚠️ VOICE ERROR: {e}")
+        pass
     return None
 
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    voice_mode = request.json.get("voice_mode", False) # Pata chalega ki Live mode ON hai ya OFF
+    voice_mode = request.json.get("voice_mode", False)
 
     if not user_input: return jsonify({"reply": "Kuch toh bolo babu! 😘"})
 
@@ -109,7 +114,7 @@ def chat():
                 "temperature": 0.6, 
                 "max_tokens": 80 
             }),
-            timeout=8
+            timeout=20 # <--- Yahan 8 ki jagah 20 kar diya hai taaki error na aaye!
         )
         
         reply = response.json()['choices'][0]['message']['content']
@@ -118,15 +123,16 @@ def chat():
         threading.Thread(target=save_chat_background, args=(user_input, reply, now)).start()
 
         audio_data = None
-        # Agar LIVE mode on hai, tabhi voice banegi!
         if voice_mode:
             audio_data = get_real_voice(reply)
 
         return jsonify({"reply": reply, "audio": audio_data})
+    
     except Exception as e:
+        print(f"⚠️ CHAT ERROR: {e}") # <--- Asli error check karne ke liye add kiya hai
         return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🥺"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-            
+    
