@@ -63,7 +63,6 @@ def get_real_voice(text):
         if response.status_code == 200:
             return base64.b64encode(response.content).decode('utf-8')
     except Exception as e:
-        print(f"⚠️ VOICE ERROR: {e}")
         pass
     return None
 
@@ -103,11 +102,12 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # OpenRouter ka pakka free model lagaya hai
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-lite-001", 
+                "model": "google/gemini-2.0-flash-lite-preview-02-05:free", 
                 "messages": messages,
                 "temperature": 0.6, 
                 "max_tokens": 80 
@@ -115,12 +115,17 @@ def chat():
             timeout=20 
         )
         
-        # --- NAYA SMART ERROR CHECKER ---
         if response.status_code != 200:
-            print(f"⚠️ API ERROR: {response.status_code} - {response.text}")
-            return jsonify({"reply": "Babu, thoda AI server busy hai, 1 minute baad try karna! 🥺"})
+            print(f"⚠️ API STATUS ERROR: {response.status_code} - {response.text}")
+            return jsonify({"reply": "Babu, OpenRouter ka server busy hai, 1 min baad message karna! 🥺"})
         
         res_json = response.json()
+        
+        # --- YAHAN 'choices' WALA ERROR HAMESHA KE LIYE FIX KIYA HAI ---
+        if 'choices' not in res_json or len(res_json['choices']) == 0:
+            print(f"⚠️ API DATA ERROR: {res_json}")
+            return jsonify({"reply": "Babu, lagta hai AI so gaya hai ya free limit khatam ho gayi! 🙄 Ek ghante baad try karna."})
+        
         reply = res_json['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
@@ -133,10 +138,9 @@ def chat():
         return jsonify({"reply": reply, "audio": audio_data})
     
     except Exception as e:
-        print(f"⚠️ CHAT ERROR: {e}") 
+        print(f"⚠️ CHAT EXCEPTION: {e}") 
         return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🥺"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
