@@ -8,9 +8,8 @@ app = Flask(__name__)
 # --- Configuration ---
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") # ElevenLabs API Key
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") 
 
-# ElevenLabs Voice ID (Rachel)
 VOICE_ID = "21m00Tcm4TlvDq8ikWAM" 
 
 try:
@@ -44,7 +43,6 @@ def save_chat_background(user_text, ai_text, timestamp):
         except Exception as e:
             pass
 
-# --- REAL VOICE GENERATOR ---
 def get_real_voice(text):
     if not ELEVENLABS_API_KEY: 
         return None
@@ -61,7 +59,7 @@ def get_real_voice(text):
             "model_id": "eleven_multilingual_v2", 
             "voice_settings": {"stability": 0.5, "similarity_boost": 0.75}
         }
-        response = requests.post(url, json=data, headers=headers, timeout=10) # Voice ke liye bhi thoda time badha diya hai
+        response = requests.post(url, json=data, headers=headers, timeout=10) 
         if response.status_code == 200:
             return base64.b64encode(response.content).decode('utf-8')
     except Exception as e:
@@ -114,10 +112,16 @@ def chat():
                 "temperature": 0.6, 
                 "max_tokens": 80 
             }),
-            timeout=20 # <--- Yahan 8 ki jagah 20 kar diya hai taaki error na aaye!
+            timeout=20 
         )
         
-        reply = response.json()['choices'][0]['message']['content']
+        # --- NAYA SMART ERROR CHECKER ---
+        if response.status_code != 200:
+            print(f"⚠️ API ERROR: {response.status_code} - {response.text}")
+            return jsonify({"reply": "Babu, thoda AI server busy hai, 1 minute baad try karna! 🥺"})
+        
+        res_json = response.json()
+        reply = res_json['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
         threading.Thread(target=save_chat_background, args=(user_input, reply, now)).start()
@@ -129,7 +133,7 @@ def chat():
         return jsonify({"reply": reply, "audio": audio_data})
     
     except Exception as e:
-        print(f"⚠️ CHAT ERROR: {e}") # <--- Asli error check karne ke liye add kiya hai
+        print(f"⚠️ CHAT ERROR: {e}") 
         return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🥺"})
 
 if __name__ == '__main__':
