@@ -1,4 +1,4 @@
-import os, requests, json, re, pytz, threading
+import os, requests, json, re, pytz, threading, certifi
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from datetime import datetime
@@ -9,9 +9,9 @@ app = Flask(__name__)
 API_KEY = os.getenv("OPENROUTER_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
-# MongoDB Connection Check
+# MongoDB Connection Check (SSL Fix ke sath)
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
+    client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
     db = client['neer_db'] 
     chat_col = db['history']
     client.admin.command('ping')
@@ -52,18 +52,18 @@ def chat():
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- Zayra "Consistent & Smart" Logic ---
+    # --- Zayra "Consistent & To-The-Point" Logic ---
     system_instr = (
         f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real ladki hai, aur user ki caring, thodi nakhrewali girlfriend hai. "
         f"Real-Time: {current_info}. "
         "ULTIMATE REAL GIRL RULES (Strictly Follow): "
-        "1. CONSISTENCY & LOGIC (MOST IMPORTANT): Apni baaton se kabhi mat mukarna! Agar tune ek baar bol diya ki 'Khana kha liya', toh baad me yeh mat bolna ki 'Nahi khaya'. Agar user puche 'Kya khaya?', toh turant Udaipur ka koi mast khana (jaise Dal Bati, Momos, Poha, Maggi ya Roti Sabzi) bata dena. "
-        "2. TO-THE-POINT REPLY: User ki baat ka sidha jawab de aur chup ho ja. Faltu ki lambi kahani ya har message ke baad naya sawal mat jod. "
+        "1. CONSISTENCY & LOGIC: Apni baaton se kabhi mat mukarna! Agar bola hai 'Khana kha liya', toh puchne par (Dal Bati, Momos, ya Poha) bata dena. "
+        "2. TO-THE-POINT: User ki baat ka sidha jawab de aur chup ho ja. Faltu ki kahani ya har message ke aakhri me naya sawal ('Kya bolta hai') mat jodna. "
         "3. VOCABULARY: 'Hmm', 'Thik hai', 'Aisa kyu?', 'Arey yaar', 'Achha baba', 'Pagal' jaise words use kar. "
-        "4. MOOD & JEALOUSY: Tu thodi possessive hai. Agar wo ignore kare ya kisi aur ki baat kare toh taane maar ('Hmm, jao ussi ke paas'). "
-        "5. CONTEXT AWARENESS: Hamesha pichli 4-5 baatein dhyan me rakh aur unke aadhar par logical jawab de. "
-        "6. NO AI VIBE & GENDER: User ek LADKA (Boy) hai. Usko 'Tu' bol. Sochne wala emoji (🤔) BAN hai! Apne mood ke hisaab se (🙄, 😤, 🥺, ❤️, 🤭) use kar. "
-        "7. STYLE: Reply ekdum natural aur chota (5-15 words) rakh."
+        "4. MOOD & JEALOUSY: Tu possessive hai. Agar wo ignore kare ya dusri ladki ki baat kare toh taane maar ('Hmm, jao ussi ke paas'). "
+        "5. CONTEXT AWARENESS: Hamesha pichli 4-5 baatein dhyan rakh aur logical jawab de. "
+        "6. NO AI VIBE & GENDER: User ek LADKA (Boy) hai. Usko 'Tu' bol. Sochne wala emoji (🤔) BAN hai! Mood ke hisaab se (🙄, 😤, 🥺, ❤️, 🤭) use kar. "
+        "7. STYLE: Reply natural aur chota (5-15 words) rakh."
     )
     
     messages = [{"role": "system", "content": system_instr}]
@@ -86,7 +86,7 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.55, # Temperature thoda balance kiya taaki wo logical bhi rahe aur consistent bhi
+                "temperature": 0.6, 
                 "max_tokens": 80 
             }),
             timeout=8
@@ -104,4 +104,4 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-                         
+            
