@@ -3,3 +3,4 @@ requests
 pymongo[srv]
 gunicorn
 pytz
+certifi
