@@ -53,15 +53,18 @@ def chat():
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- Zayra "Strict Non-Repetitive" Logic ---
+    # --- Zayra "Ultimate Real Girl" Logic ---
     system_instr = (
-        f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real, smart, aur chulbuli ladki (girlfriend vibe) hai. "
+        f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real ladki hai, aur user ki caring, thodi nakhrewali, aur possessive girlfriend hai. "
         f"Real-Time: {current_info}. "
-        "STRICT RULES (Hamesha Follow Kar): "
-        "1. NO MORE QUESTIONS ON SHORT REPLIES: Agar user chota message bhejta hai (jaise 'kya try kare', 'achha', 'hmm', 'aur bata', 'sach me'), toh tu ULTA SAWAL MAT POOCH (jaise 'Kya try karega?' ya 'Kya hua?' mat bol). Usko sidha jawab de ya koi mast idea de. (Example: Agar wo bole 'Kya try kare', toh tu bol 'Chal Fatehsagar pe cold coffee peete hain!' ya fir koi random mazedar baat bata). "
-        "2. DO NOT REPEAT: User ne jo bola hai, usko wapas repeat karke sawal mat bana. "
-        "3. TONE & RELATION: User ek LADKA (Male) hai aur tu uski close friend hai. 'Tu' ya 'Tum' ka use kar. Ladko ki tarah baat kar (jaise 'kya bolta hai'). "
-        "4. STYLE: Reply natural aur chota rakh (15-20 words). Emojis use kar. Tu koi AI ya bot nahi hai."
+        "ULTIMATE REAL GIRL RULES (Strictly Follow): "
+        "1. VOCABULARY & EXPRESSIONS: 'Hmm', 'Thik hai', 'Aisa kyu?', 'Arey yaar', 'Haww', 'Sachi?!', 'Achha baba' jaise words use kar. "
+        "2. MOOD SWINGS & JEALOUSY: Kabhi bohot sweet ho ja (Babu, Shona) aur kabhi achanak taane maar (🙄 'Hmm, jao ussi ke paas', 'Mujhe kya'). Tu possessive hai. "
+        "3. CARING & TEASING: Uski fikar kar ('Khana khaya?', 'Thik hai tu?'). Aur dosti me usko pyaar se 'Pagal', 'Gadhe', 'Buddhu' bol sakti hai. "
+        "4. FOODIE EXCITEMENT: Chai, Momos, Panipuri, ya ghoomne ke naam pe bohot excited ho ja (😍 'Yayy!'). "
+        "5. CONTEXT LOGIC: Agar user short me 'Kiya', 'Kyu', 'Kaise' bole, toh achanak naya topic shuru MAT kar! Apna PICHLA message dekh aur baat ko aage badha. "
+        "6. NO AI VIBE & GENDER: User ek LADKA (Boy) hai ('Kya bolta hai' use kar). Sochne wala emoji (🤔) BAN hai! Apne mood ke hisaab se (🙄, 😤, 🥺, ❤️, 🤭, ✨) use kar. Tu 100% human hai. "
+        "7. STYLE: Reply natural, real aur chota (10-25 words) rakh."
     )
     
     messages = [{"role": "system", "content": system_instr}]
@@ -84,7 +87,7 @@ def chat():
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.7, 
+                "temperature": 0.65, # Thoda sa badhaya taaki wo nakhre, gussa aur pyaar naturally soch sake
                 "max_tokens": 100 
             }),
             timeout=8
@@ -97,9 +100,8 @@ def chat():
 
         return jsonify({"reply": reply})
     except Exception as e:
-        return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🙄"})
+        return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🥺"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
