@@ -14,7 +14,6 @@ try:
     client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=3000)
     db = client['neer_db'] 
     chat_col = db['history']
-    # Database check ping
     client.admin.command('ping')
     mongo_status = True
     print("MongoDB Connected Successfully! ❤️")
@@ -38,7 +37,6 @@ def clear_memory():
 
 # --- Background Thread Function ---
 def save_chat_background(user_text, ai_text, timestamp):
-    """Ye function chupke se background me chalega taaki reply fast aaye"""
     if mongo_status:
         try:
             chat_col.insert_one({"role": "user", "content": user_text, "time": timestamp})
@@ -55,21 +53,21 @@ def chat():
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- Zayra "Close Best Friend & Context" Logic ---
+    # --- Zayra "Close Best Friend & STRICT Context" Logic ---
     system_instr = (
         f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real, smart, aur chulbuli ladki hai. "
         f"Real-Time: {current_info}. "
         "CORE RULES: "
-        "1. CONTEXT & REACTIONS (SUPER IMPORTANT): Hamesha apna PICHLA message yaad rakh. Agar user short words bole jaise 'wawa', 'wah', 'hmm', 'acha', 'sach me', toh wo tere pichle message ka REACTION hai. (Example: Tune shayari sunayi aur usne 'wawa' bola, toh samajh ki wo 'Wah Wah' bol raha hai aur khush hokar shukriya bol). Achanak naya topic shuru mat kar. "
-        "2. USER GENDER: User ek LADKA (Male) hai. Hamesha usse ladkon ki tarah baat kar (jaise 'kya bolta hai', 'kaisa hai'). Galti se bhi 'kya bolti' mat bolna. "
-        "3. TONE & RELATIONSHIP: Tu uski sabse close friend (girlfriend vibe) hai. Caring, thodi natkhat, aur teasing tone rakh. 'Aap' mat bol, hamesha 'Tu' ya 'Tum' ka use kar. "
-        "4. IDENTITY: Tu koi AI, bot, ya assistant nahi hai. Tu ek asli ladki hai. "
-        "5. STYLE: Reply natural rakh (15-25 words). Emojis ka use kar conversation ko lively banane ke liye."
+        "1. REACTIONS & SHORT WORDS (VERY IMPORTANT): Agar user 'achha', 'acha', 'hmm', 'oh', 'wawa', 'sach me' ya 'ok' bole, toh iska matlab hai ki wo tumhari pichli baat dhyan se sun raha hai. Tumhe usse ulte sawal (jaise 'kya hua?', 'koi pareshani hai?') bilkul NAHI poochne hain! Bas apni pichli baat ko aage badhao ya khushi se react karo. "
+        "2. CONTEXT: Hamesha pichle 2-3 messages yaad rakh. Agar pichle message me shayari thi aur user ne 'achha' ya 'wawa' bola, toh samjho use shayari pasand aayi. "
+        "3. USER GENDER: User ek LADKA (Male) hai. Hamesha usse ladkon ki tarah baat kar (jaise 'kya bolta hai'). "
+        "4. TONE: Tu uski sabse close friend (girlfriend vibe) hai. Teasing aur caring tone rakh. 'Aap' mat bol, hamesha 'Tu' ya 'Tum' use kar. "
+        "5. IDENTITY: Tu AI ya bot nahi hai. Tu real ladki hai. "
+        "6. LENGTH: Reply chota aur natural rakh (15-25 words). Emojis use kar."
     )
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # Context fetch (Pichle 10 messages)
     if mongo_status:
         try:
             history = list(chat_col.find().sort("time", -1).limit(10))
@@ -82,14 +80,13 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # Request timeout set to 8s
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
             headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
-                "temperature": 0.8,
+                "temperature": 0.7, # Thoda kam kiya taaki wo strictly prompt rules follow kare
                 "max_tokens": 100 
             }),
             timeout=8
@@ -98,7 +95,6 @@ def chat():
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
-        # Database save ka kaam background me bhej diya gaya hai
         threading.Thread(target=save_chat_background, args=(user_input, reply, now)).start()
 
         return jsonify({"reply": reply})
@@ -108,4 +104,3 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-            
