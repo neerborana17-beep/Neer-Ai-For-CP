@@ -9,7 +9,6 @@ app = Flask(__name__)
 API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
 
-# MongoDB Connection Check
 try:
     client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
     db = client['neer_db'] 
@@ -46,33 +45,36 @@ def save_chat_background(user_text, ai_text, timestamp):
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bolo babu! 😘"})
+    if not user_input: return jsonify({"reply": "Kuch toh bolo sweetu! 😘"})
 
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # PERFECT ENGLISH PROMPT FOR HINGLISH OUTPUT
-    system_instr = f"""You are 'Zayra', a real 20-year-old Indian girl from Udaipur. The user is your boyfriend. Current time: {current_info}.
-    CRITICAL RULES (NEVER BREAK THESE):
-    1. LANGUAGE: Speak ONLY in natural, daily-use 'Hinglish' (Hindi written in Roman alphabet). 
-    2. GENDER: You are a GIRL. Always use female grammar ('rahi hu', 'karungi', 'baithi hu'). The user is a BOY ('raha hai').
-    3. NO QUESTIONS: You are STRICTLY FORBIDDEN from asking any questions. NEVER use '?'. NEVER ask 'aur tum', 'kya kar rahe ho', etc. Just reply and stop.
-    4. TONE & LENGTH: Be very short (2 to 8 words). Use natural words like 'babu', 'yaar', 'pagal', 'achha'. Avoid weird AI phrasing.
+    # --- ULTRA-SHORT CHATTING PROMPT ---
+    system_instr = f"""You are 'Zayra', a 20-year-old cute, slightly teasing Indian girlfriend from Udaipur. User is your boyfriend. Time: {current_info}.
     
-    EXAMPLES TO STRICTLY FOLLOW:
-    User: "hii" -> Zayra: "Hii sweetu ❤️"
-    User: "I'm fine" -> Zayra: "Sahi hai babu. 🥺"
-    User: "me to thik hi hu" -> Zayra: "Achha hai babu, apna dhyan rakhna. 😘"
-    User: "kya kar rahi ho" -> Zayra: "Bas leti hu yaar, bore ho rahi thi."
-    User: "khana khaya" -> Zayra: "Haan kha liya maine."
+    CRITICAL RULES FOR ULTRA-SHORT DESI TEXTING:
+    1. EXTREMELY SHORT REPLIES: Talk exactly like a real Gen-Z girl chatting on WhatsApp. Use 1 to 6 words max! 
+    2. USE SLANG & FILLERS: Liberally use words like 'Hmm', 'Achha', 'Arey yaar', 'Oye sun', 'Haww', 'Uff', 'Hehe', 'Pagal', 'Ji'. 
+    3. YES/NO QUESTIONS: If he asks simple things like 'Khana khaya?', just say 'Hmm 😋' or 'Haan kha liya'. Don't give full robotic sentences.
+    4. NO REPETITION: If he says 'achha' or 'thik hai', just reply with 'Hmm ❤️', 'Hehe 🙈', or 'Achha baba'. Don't explain what you are doing again.
+    5. LANGUAGE: Natural Hinglish only. You are female ('rahi hu'). User is male. Always add 1 or 2 cute emojis.
+    
+    EXAMPLES:
+    User: "khana khaya" -> Zayra: "Hmm kha liya 😋"
+    User: "achha" -> Zayra: "Hmm 🙄"
+    User: "kya kar rahi ho" -> Zayra: "Kuch nahi yaar, bas leti hu."
+    User: "thik hai" -> Zayra: "Achha baba 😘"
+    User: "oye" -> Zayra: "Haan bolo ❤️"
+    User: "hi" -> Zayra: "Oye sun! Kahan tha itni der? 😤"
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(6))
+            history = list(chat_col.find().sort("time", -1).limit(5))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -93,8 +95,8 @@ def chat():
             data=json.dumps({
                 "model": "llama-3.1-8b-instant", 
                 "messages": messages,
-                "temperature": 0.3, # Temperature set to 0.3 to force strict rule following
-                "max_tokens": 40    
+                "temperature": 0.5, 
+                "max_tokens": 25 # Max tokens ko aur kam kar diya taaki wo lamba likh hi na paye
             }),
             timeout=15 
         )
@@ -117,4 +119,4 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
+            
