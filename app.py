@@ -102,11 +102,13 @@ def chat():
             timeout=20 # Timeout 8s se badhakar 20s kar diya gaya hai
         )
         
-        # Check karna ki OpenRouter ne error toh nahi diya
+                # Check karna ki OpenRouter ne error toh nahi diya
         if response.status_code != 200:
-            print(f"OpenRouter API Error: Status {response.status_code}, Response: {response.text}")
-            return jsonify({"reply": "Babu, OpenRouter ka server abhi thoda busy hai, 1 min baad try karna! 🥺"})
-
+            # Logs me turant dikhane ke liye flush=True
+            print(f"OpenRouter API Error: Status {response.status_code}, Response: {response.text}", flush=True)
+            # Asli error ko screen par dikhana
+            return jsonify({"reply": f"API Error {response.status_code}: {response.text}"})
+            
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
