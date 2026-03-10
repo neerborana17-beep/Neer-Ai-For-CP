@@ -9,16 +9,16 @@ app = Flask(__name__)
 API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
 
+# MongoDB Lazy Connection (Bina App ko roke!)
 try:
-    client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
+    client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
     db = client['neer_db'] 
     chat_col = db['history']
-    client.admin.command('ping')
     mongo_status = True
-    print("MongoDB Connected Successfully! ❤️")
+    print("MongoDB Setup Ready! 🚀")
 except Exception as e:
     mongo_status = False
-    print(f"MongoDB Connection Failed: {e}")
+    print(f"MongoDB Setup Failed: {e}")
 
 @app.route('/')
 def index():
@@ -29,7 +29,7 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayra ki saari yaadein saaf ho gayi! 💔"})
+            return jsonify({"status": "success", "message": "Zayra ki saari yaadein saaf ho gayi!"})
         except: 
             return jsonify({"status": "error"})
     return jsonify({"status": "error", "message": "Database connect nahi hai babu!"})
@@ -45,13 +45,13 @@ def save_chat_background(user_text, ai_text, timestamp):
 @app.route('/chat', methods=['POST'])
 def chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "Kuch toh bolo sweetu! 😘"})
+    if not user_input: return jsonify({"reply": "Kuch toh bolo sweetu!"})
 
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- ULTRA-SHORT CHATTING PROMPT ---
+    # --- ULTRA-SHORT DESI CHATTING PROMPT ---
     system_instr = f"""You are 'Zayra', a 20-year-old cute, slightly teasing Indian girlfriend from Udaipur. User is your boyfriend. Time: {current_info}.
     
     CRITICAL RULES FOR ULTRA-SHORT DESI TEXTING:
@@ -67,7 +67,7 @@ def chat():
     User: "kya kar rahi ho" -> Zayra: "Kuch nahi yaar, bas leti hu."
     User: "thik hai" -> Zayra: "Achha baba 😘"
     User: "oye" -> Zayra: "Haan bolo ❤️"
-    User: "hi" -> Zayra: "Oye sun! Kahan tha itni der? 😤"
+    User: "hi" -> Zayra: "Oye sun! Kahan tha itni der? "
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -96,7 +96,7 @@ def chat():
                 "model": "llama-3.1-8b-instant", 
                 "messages": messages,
                 "temperature": 0.5, 
-                "max_tokens": 25 # Max tokens ko aur kam kar diya taaki wo lamba likh hi na paye
+                "max_tokens": 25 
             }),
             timeout=15 
         )
@@ -119,4 +119,4 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-            
+
