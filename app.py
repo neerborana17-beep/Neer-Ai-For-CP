@@ -23,6 +23,7 @@ except Exception as e:
 
 @app.route('/')
 def index():
+    # ध्यान दें: index.html 'templates' नाम के फोल्डर के अंदर होना चाहिए
     return render_template('index.html')
 
 @app.route('/delete_history_secret_99', methods=['POST'])
@@ -41,6 +42,7 @@ def save_chat_background(user_text, ai_text, timestamp):
             chat_col.insert_one({"role": "user", "content": user_text, "time": timestamp})
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except Exception as e:
+            print(f"Chat save error: {e}")
             pass
 
 @app.route('/chat', methods=['POST'])
@@ -80,26 +82,44 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
+        # OpenRouter Headers Update kiye gaye hain
+        headers = {
+            "Authorization": f"Bearer {API_KEY}", 
+            "Content-Type": "application/json",
+            "HTTP-Referer": "https://neer-ai-for-cp.onrender.com", # Aapki site ka URL
+            "X-Title": "Zayra AI Chat"
+        }
+
         response = requests.post(
             url="https://openrouter.ai/api/v1/chat/completions",
-            headers={"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
+            headers=headers,
             data=json.dumps({
                 "model": "google/gemini-2.0-flash-lite-001", 
                 "messages": messages,
                 "temperature": 0.6, 
-                "max_tokens": 80 
+                "max_tokens": 100 
             }),
-            timeout=8
+            timeout=20 # Timeout 8s se badhakar 20s kar diya gaya hai
         )
         
+        # Check karna ki OpenRouter ne error toh nahi diya
+        if response.status_code != 200:
+            print(f"OpenRouter API Error: Status {response.status_code}, Response: {response.text}")
+            return jsonify({"reply": "Babu, OpenRouter ka server abhi thoda busy hai, 1 min baad try karna! 🥺"})
+
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
         threading.Thread(target=save_chat_background, args=(user_input, reply, now)).start()
 
         return jsonify({"reply": reply})
+    
+    except requests.exceptions.Timeout:
+        print("API Timeout Error: Reply aane me bahut time lag gaya.")
+        return jsonify({"reply": "Babu, net bahut slow hai, ek baar aur message karo na! 🥺"})
     except Exception as e:
-        return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🥺"})
+        print(f"General API Error: {e}")
+        return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
