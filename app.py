@@ -6,10 +6,11 @@ from datetime import datetime
 app = Flask(__name__)
 
 # --- Configuration ---
-API_KEY = os.getenv("OPENROUTER_API_KEY")
+# Ab hum Groq ki API use kar rahe hain
+API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
 
-# MongoDB Connection Check (SSL Fix ke sath)
+# MongoDB Connection Check
 try:
     client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
     db = client['neer_db'] 
@@ -23,7 +24,6 @@ except Exception as e:
 
 @app.route('/')
 def index():
-    # ध्यान दें: index.html 'templates' नाम के फोल्डर के अंदर होना चाहिए
     return render_template('index.html')
 
 @app.route('/delete_history_secret_99', methods=['POST'])
@@ -82,33 +82,29 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # OpenRouter Headers Update kiye gaye hain
+        # Groq API Setup
         headers = {
             "Authorization": f"Bearer {API_KEY}", 
-            "Content-Type": "application/json",
-            "HTTP-Referer": "https://neer-ai-for-cp.onrender.com", # Aapki site ka URL
-            "X-Title": "Zayra AI Chat"
+            "Content-Type": "application/json"
         }
 
         response = requests.post(
-            url="https://openrouter.ai/api/v1/chat/completions",
+            url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             data=json.dumps({
-                "model": "google/gemini-2.0-flash-lite-001", 
+                "model": "llama3-8b-8192", # Groq ka superfast model
                 "messages": messages,
                 "temperature": 0.6, 
                 "max_tokens": 100 
             }),
-            timeout=20 # Timeout 8s se badhakar 20s kar diya gaya hai
+            timeout=15 
         )
         
-                # Check karna ki OpenRouter ne error toh nahi diya
+        # Error check (debugging message ke sath)
         if response.status_code != 200:
-            # Logs me turant dikhane ke liye flush=True
-            print(f"OpenRouter API Error: Status {response.status_code}, Response: {response.text}", flush=True)
-            # Asli error ko screen par dikhana
+            print(f"Groq API Error: Status {response.status_code}, Response: {response.text}", flush=True)
             return jsonify({"reply": f"API Error {response.status_code}: {response.text}"})
-            
+
         reply = response.json()['choices'][0]['message']['content']
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
@@ -117,7 +113,7 @@ def chat():
         return jsonify({"reply": reply})
     
     except requests.exceptions.Timeout:
-        print("API Timeout Error: Reply aane me bahut time lag gaya.")
+        print("API Timeout Error.")
         return jsonify({"reply": "Babu, net bahut slow hai, ek baar aur message karo na! 🥺"})
     except Exception as e:
         print(f"General API Error: {e}")
@@ -126,4 +122,4 @@ def chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
+
