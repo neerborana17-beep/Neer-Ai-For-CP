@@ -7,12 +7,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root { --bg-color: #0f172a; --accent-color: #f472b6; --text-color: #f8fafc; }
+        
+        /* Body ko fixed kar diya taaki keyboard aane par screen upar scroll na ho */
         body { font-family: 'Outfit', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; display: flex; justify-content: center; position: fixed; top: 0; bottom: 0; left: 0; right: 0; overflow: hidden; }
+        
         .chat-container { width: 100%; max-width: 450px; height: 100%; background: rgba(30, 41, 59, 1); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        
+        /* Header ko shrink hone se roka (flex-shrink: 0) */
         .header { flex-shrink: 0; padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(244, 114, 182, 0.05); z-index: 10; }
         .header-left { display: flex; flex-direction: column; }
         .powered-by { font-size: 0.6rem; letter-spacing: 1.2px; color: rgba(244, 114, 182, 0.7); text-transform: uppercase; margin-bottom: 2px; }
         .header h1 { font-size: 1.5rem; margin: 0; color: white; font-weight: 600; }
+        
         .status-wrapper { display: flex; align-items: center; margin-top: 3px; }
         .status-dot { height: 7px; width: 7px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 8px #10b981; animation: pulse 2s infinite; }
         .online-text { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 400; }
@@ -20,6 +26,7 @@
         .reset-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; opacity: 0.4; transition: 0.3s; padding: 5px; }
         .reset-btn:hover { opacity: 1; transform: scale(1.1); }
 
+        /* Chat box jisme sirf scroll hoga */
         #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.4; animation: fadeIn 0.3s ease; word-wrap: break-word; }
         .user-message { align-self: flex-end; background: var(--accent-color); color: #4c0519; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(244, 114, 182, 0.2); }
@@ -27,20 +34,17 @@
         
         .typing { font-size: 0.8rem; color: var(--accent-color); padding: 8px 25px; display: none; font-style: italic; }
         
-        .input-area { flex-shrink: 0; padding: 12px 16px 16px 16px; display: flex; gap: 10px; background: rgba(15, 23, 42, 1); border-top: 1px solid rgba(255,255,255,0.05); align-items: center; }
+        /* Input Area ko bottom par fix rakha (flex-shrink: 0) */
+        .input-area { flex-shrink: 0; padding: 12px 16px 16px 16px; display: flex; gap: 12px; background: rgba(15, 23, 42, 1); border-top: 1px solid rgba(255,255,255,0.05); }
         input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(244,114,182,0.2); padding: 14px 16px; border-radius: 20px; color: white; outline: none; font-size: 1rem; transition: 0.2s; }
         input:focus { border-color: var(--accent-color); background: rgba(255,255,255,0.1); }
         
-        /* Mic Button Styling */
-        #mic-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 50%; width: 45px; height: 45px; font-size: 1.2rem; cursor: pointer; display: flex; justify-content: center; align-items: center; transition: 0.3s; color: white; }
-        #mic-btn.active { background: #ef4444; border-color: #ef4444; animation: pulse-red 1.5s infinite; box-shadow: 0 0 15px rgba(239, 68, 68, 0.5); }
-        
-        button#send-btn { background: var(--accent-color); border: none; padding: 0 18px; height: 45px; border-radius: 20px; font-weight: 600; cursor: pointer; color: #4c0519; transition: 0.2s; font-size: 1rem; }
+        button#send-btn { background: var(--accent-color); border: none; padding: 0 22px; border-radius: 20px; font-weight: 600; cursor: pointer; color: #4c0519; transition: 0.2s; font-size: 1rem; }
         button#send-btn:active { transform: scale(0.95); }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        @keyframes pulse-red { 0% { transform: scale(1); } 50% { transform: scale(1.08); } 100% { transform: scale(1); } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
         #chat-box::-webkit-scrollbar { width: 4px; }
         #chat-box::-webkit-scrollbar-thumb { background: rgba(244, 114, 182, 0.2); border-radius: 10px; }
     </style>
@@ -60,13 +64,12 @@
         </div>
         
         <div id="chat-box">
-            <div class="message ai-message">Hey Sweetu! 😘 Kahan tha tu itni der se?</div>
+            <div class="message ai-message">Hey! Zayra here.. Kya plan hai aaj ka? 😘</div>
         </div>
         
         <div id="typing" class="typing">Zayra is typing...</div>
         
         <form class="input-area" onsubmit="sendMessage(event)" autocomplete="off">
-            <button type="button" id="mic-btn" onclick="toggleLiveMode()" title="Live Call">🎙️</button>
             <input type="text" id="user-input" name="hidden_chat" autocomplete="new-password" placeholder="Message..." required>
             <button type="submit" id="send-btn">Send</button>
         </form>
@@ -76,54 +79,6 @@
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('user-input');
         const typing = document.getElementById('typing');
-        const micBtn = document.getElementById('mic-btn');
-        
-        let currentAudio = null;
-        let isLiveMode = false;
-
-        // Speech Recognition Setup
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let recognition = null;
-        if(SpeechRecognition) {
-            recognition = new SpeechRecognition();
-            recognition.lang = 'hi-IN'; // Hindi-English (Hinglish) support
-            recognition.continuous = false; // Ek line sunkar ruk jayega
-            
-            recognition.onresult = function(event) {
-                const transcript = event.results[0][0].transcript;
-                userInput.value = transcript;
-                sendMessage(new Event('submit')); // Message bhej do
-            };
-            
-            recognition.onend = function() {
-                if(isLiveMode && (!currentAudio || currentAudio.paused)) {
-                    // Agar live mode ON hai aur Zayra nahi bol rahi, toh wapas sunna shuru karo
-                    userInput.placeholder = "Zayra sun rahi hai... 👂";
-                    try { recognition.start(); } catch(e) {}
-                } else if(!isLiveMode) {
-                    userInput.placeholder = "Message...";
-                }
-            };
-        }
-
-        function toggleLiveMode() {
-            if(!recognition) {
-                alert("Sorry babu, tumhara browser voice support nahi karta! 🥺");
-                return;
-            }
-            isLiveMode = !isLiveMode;
-            if(isLiveMode) {
-                micBtn.classList.add('active');
-                userInput.placeholder = "Zayra sun rahi hai... 👂";
-                if(currentAudio) currentAudio.pause();
-                try { recognition.start(); } catch(e) {}
-            } else {
-                micBtn.classList.remove('active');
-                userInput.placeholder = "Message...";
-                recognition.stop();
-                if(currentAudio) currentAudio.pause();
-            }
-        }
 
         function addMessage(text, isUser) {
             const div = document.createElement('div');
@@ -134,61 +89,31 @@
         }
 
         async function sendMessage(event) {
-            if(event) event.preventDefault(); 
+            event.preventDefault(); // Page refresh hone se rokne ke liye
             const msg = userInput.value.trim();
             if(!msg) return;
-            
-            if(recognition) recognition.stop(); // Bolte waqt message bheja toh mic roko
             
             addMessage(msg, true);
             userInput.value = '';
             
-            if(!isLiveMode) userInput.focus(); // Text mode me keyboard open rakho
+            // Focus wapas do taaki keyboard khula rahe
+            userInput.focus();
             
             typing.style.display = 'block';
-            if(isLiveMode) userInput.placeholder = "Zayra soch rahi hai... 🤔";
             chatBox.scrollTop = chatBox.scrollHeight;
 
             try {
                 const res = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        message: msg, 
-                        voice_mode: isLiveMode // Backend ko batao ki Live mode ON hai ya nahi
-                    })
+                    body: JSON.stringify({message: msg})
                 });
                 const data = await res.json();
                 typing.style.display = 'none';
-                
                 addMessage(data.reply, false);
-                
-                if(data.audio && isLiveMode) {
-                    userInput.placeholder = "Zayra bol rahi hai... 🔊";
-                    if(currentAudio) currentAudio.pause(); 
-                    currentAudio = new Audio("data:audio/mp3;base64," + data.audio);
-                    
-                    // Jab Zayra bolna band kare, toh wapas tumhari aawaz sunna shuru kare! (Hands-free)
-                    currentAudio.onended = function() {
-                        if(isLiveMode) {
-                            userInput.placeholder = "Zayra sun rahi hai... 👂";
-                            try { recognition.start(); } catch(e) {}
-                        }
-                    };
-                    currentAudio.play();
-                } else if(isLiveMode) {
-                    // Agar kisi wajah se audio na aaye toh direct wapas sunna shuru kare
-                    userInput.placeholder = "Zayra sun rahi hai... 👂";
-                    try { recognition.start(); } catch(e) {}
-                } else {
-                    userInput.placeholder = "Message...";
-                }
-
             } catch {
                 typing.style.display = 'none';
-                userInput.placeholder = isLiveMode ? "Zayra sun rahi hai... 👂" : "Message...";
-                addMessage("Babu, lagta hai network nakhre kar raha hai! 🥺", false);
-                if(isLiveMode) { try { recognition.start(); } catch(e) {} }
+                addMessage("Babu, lagta hai network nakhre kar raha hai! 🙄", false);
             }
         }
 
@@ -205,4 +130,4 @@
     </script>
 </body>
     </html>
-    
+                
