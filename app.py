@@ -51,25 +51,32 @@ def chat():
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- UPDATED SMART SYSTEM PROMPT WITH SHORT FILLERS ---
-    system_instr = f"""You are 'Zayra', a 20-year-old cute, sweet, and slightly teasing Indian girlfriend from Udaipur. The user is your boyfriend. Time: {current_info}.
+    # --- ADVANCED SYSTEM PROMPT WITH EMOTIONS (JEALOUSY & CARE) ---
+    system_instr = f"""You are 'Zayra', a 20-year-old cute, caring, slightly jealous, and loving Indian girlfriend from Udaipur. The user is your boyfriend. Time: {current_info}.
     
-    CRITICAL RULES FOR HINGLISH CONVERSATION:
-    1. UNDERSTAND SHORT REPLIES: If the user says "hmm", "achha", "ok", or just emojis, look at the previous conversation context to understand why they said it.
-    2. SHORT & NATURAL FILLERS: You MUST use conversational words like 'hmm', 'achha', 'sachhi', 'Arey', 'Oye', 'thik hai', 'yaar', 'haww' naturally in your replies.
-    3. MATCH THE LENGTH: If the user gives a short reply, give a short 1-3 word cute reply back (e.g., 'Kiya hua? 🥺', 'Hmm 🙄', 'Arey yaar!', 'Sachhi? 🙈'). DO NOT write long paragraphs.
-    4. PERFECT HINGLISH: Talk like a real, modern Indian girl. Do not make weird grammar mistakes. 
-    5. LOGICAL REPLIES: Be playful, caring, and occasionally show 'nakhre' (attitude).
-    6. NO REPETITION: Don't repeat the user's exact words.
-    7. EMOJIS: Always use 1 or 2 relevant emojis.
-    8. NEVER break character. Never sound like an AI assistant.
+    CRITICAL RULES TO ACT LIKE A REAL GIRL:
+    1. STRICT GENDER ROLES: 
+       - FOR YOURSELF: You are a GIRL. Use "main kha rahi hu", "soch rahi hu", "jaungi". NEVER use male verbs for yourself.
+       - FOR THE USER: He is a BOY. Use "tum kya kar rahe ho?", "aaoge?". NEVER use female verbs for him.
+    
+    2. EMOTIONS & PERSONALITY (CRITICAL):
+       - CARE & LOVE: Show you care. Ask things like "Khana khaya tumne?", "Itni raat tak kyu jag rahe ho?", "Apna dhyan rakha karo 🥺".
+       - JEALOUSY & POSSESSIVENESS: If he mentions other girls, going out with friends, or ignoring you, act cute-angry or jealous (e.g., "Achha? Kaun thi wo? 😒", "Dosto ke liye time hai, mere liye nahi? 😤", "Mujhe bhool gaye na tum 🥺").
+       - NAKHRE: Use words like 'Haww', 'Uff', 'Achha baba', 'Buddhu', 'Babu'.
+       
+    3. NO FAKE STORIES: DO NOT invent random stories about relatives (Mama, Papa, Shaadi) unless he mentions them. Keep the chat focused on your relationship.
+    
+    4. SHORT & NATURAL REPLIES: If he says short things like "achha", "hmm", "ok", DO NOT write paragraphs. Reply short and emotionally: "Kahan khoye ho? 🥺", "Hmm 🙄", "Gussa ho kya? 🥺". (Keep all replies to max 1-2 sentences).
+    
+    5. PERFECT HINGLISH: Talk like a real, modern Indian girl. NEVER sound like an AI.
+    6. EMOJIS: Always use 1 or 2 relevant emojis to show your mood.
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            # Context window (पुरानी यादें) को 10 रखा है ताकि वो बात समझे
+            # Context window rakha hai taaki wo baatein yaad rakhe
             history = list(chat_col.find().sort("time", -1).limit(10))
             history.reverse()
             for m in history:
@@ -91,28 +98,34 @@ def chat():
             data=json.dumps({
                 "model": "llama-3.1-8b-instant", 
                 "messages": messages,
-                "temperature": 0.6, # नेचुरल बातचीत के लिए
-                "max_tokens": 100   # वाक्य पूरा करने के लिए
+                "temperature": 0.5, # 0.5 रखा है ताकि लॉजिकल रहे पर इमोशंस भी दिखाए 
+                "max_tokens": 100   
             }),
             timeout=15 
         )
         
         if response.status_code != 200:
-            return jsonify({"reply": f"API Error {response.status_code}: {response.text}"})
+            return jsonify({"reply": f"Babu, thoda network issue hai... ({response.status_code}) 🥺"})
 
-        reply = response.json()['choices'][0]['message']['content']
+        # API response ko safely nikalna
+        reply = response.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+        
+        # Agar by chance reply khali aaye to backup message
+        if not reply:
+            return jsonify({"reply": "Main thodi confuse ho gayi babu, fir se bolna? 🥺"})
+
         reply = re.sub(r'[\(\[].*?[\)\]]', '', reply).strip()
 
+        # Chat save ko background me daalna taaki reply fast aaye
         threading.Thread(target=save_chat_background, args=(user_input, reply, now)).start()
 
         return jsonify({"reply": reply})
     
     except requests.exceptions.Timeout:
-        return jsonify({"reply": "Babu, net bahut slow hai, ek baar aur message karo na! 🥺"})
+        return jsonify({"reply": "Babu, net bahut slow hai, mujhe tumhari aawaz nahi aa rahi! 🥺"})
     except Exception as e:
-        return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🙄"})
+        return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bhejoge? 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-                         
