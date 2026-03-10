@@ -6,7 +6,6 @@ from datetime import datetime
 app = Flask(__name__)
 
 # --- Configuration ---
-# Ab hum Groq ki API use kar rahe hain
 API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
 
@@ -42,7 +41,6 @@ def save_chat_background(user_text, ai_text, timestamp):
             chat_col.insert_one({"role": "user", "content": user_text, "time": timestamp})
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except Exception as e:
-            print(f"Chat save error: {e}")
             pass
 
 @app.route('/chat', methods=['POST'])
@@ -54,7 +52,6 @@ def chat():
     now = datetime.now(ist)
     current_info = now.strftime("%d %b %Y, %I:%M %p")
 
-    # --- Zayra "Consistent & To-The-Point" Logic ---
     system_instr = (
         f"Tera naam 'Zayra' hai. Tu Udaipur ki ek real ladki hai, aur user ki caring, thodi nakhrewali girlfriend hai. "
         f"Real-Time: {current_info}. "
@@ -82,7 +79,6 @@ def chat():
     messages.append({"role": "user", "content": user_input})
     
     try:
-        # Groq API Setup
         headers = {
             "Authorization": f"Bearer {API_KEY}", 
             "Content-Type": "application/json"
@@ -92,7 +88,7 @@ def chat():
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             data=json.dumps({
-                "model": "llama3-8b-8192", # Groq ka superfast model
+                "model": "llama-3.1-8b-instant", # Naya Supported Model yahan update kiya hai ⚡
                 "messages": messages,
                 "temperature": 0.6, 
                 "max_tokens": 100 
@@ -100,7 +96,6 @@ def chat():
             timeout=15 
         )
         
-        # Error check (debugging message ke sath)
         if response.status_code != 200:
             print(f"Groq API Error: Status {response.status_code}, Response: {response.text}", flush=True)
             return jsonify({"reply": f"API Error {response.status_code}: {response.text}"})
@@ -113,13 +108,11 @@ def chat():
         return jsonify({"reply": reply})
     
     except requests.exceptions.Timeout:
-        print("API Timeout Error.")
         return jsonify({"reply": "Babu, net bahut slow hai, ek baar aur message karo na! 🥺"})
     except Exception as e:
-        print(f"General API Error: {e}")
         return jsonify({"reply": "Babu, thoda net nakhre kar raha hai, ek baar fir se bolna? 🙄"})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-
+                           
