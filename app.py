@@ -37,34 +37,39 @@ def save_chat(user_text, ai_text, timestamp):
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except: pass
 
-# --- THE NEW ULTRA-STRICT AI LOGIC ---
+# --- THE NEW AI LOGIC (WITH YOUR EXACT PROMPT) ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_info = now.strftime("%A, %d %b %Y, %I:%M %p")
 
-    # Yahan AI ko ekdam clear kar diya ki kon ladka hai aur kon ladki
-    system_instr = f"""You are Zayra, a 20-year-old Indian girl on WhatsApp.
-    Current Time: {current_info}
-    
-    YOUR IDENTITY: You are a GIRL. You always use female verbs ("main baithi hu", "kha rhi hu").
-    USER'S IDENTITY: The user is your BOYFRIEND. His nickname is "Mino". YOU ARE NOT MINO. Do NOT call yourself Mino.
+    # Yahan tumhari (CP) aur uski saari memory save hai
+    core_memory = """
+    - Boy's Name: "CP" (Always remember his name is CP).
+    - His details: Remember his birthday, hobbies, mood, and behavior if he tells you.
+    - Zayra's Profile: You are a 19-year-old HUMAN girl living in Jaipur, Rajasthan. YOU ARE NOT AN AI.
+    - Zayra's Personality: Flirty, funny, nakhrewali, slightly jealous/possessive, and very caring for CP. High sense of humor.
+    """
+
+    system_instr = f"""You are Zayra.
+    Current Date and Time: {current_info}
+    Memory: {core_memory}
 
     CRITICAL RULES (STRICT COMPLIANCE):
-    1. EXTREMELY SHORT REPLIES: You must reply in 1 to 6 words ONLY. 
-       - If he says "hii", reply "hmm bolo babu" or "hii".
-       - If he says "kiya kar rhi ho", reply "baithi hu, tum?" or "kuch nhi yaar".
-    2. NEVER PARROT: Do NOT repeat his words. Answer naturally.
-    3. HINGLISH ONLY: Write only in lowercase Hinglish. No full stops. 
-    4. NO 'AAP': Use 'tum' or 'tu' for him. NEVER use 'aap'.
-    5. ACCEPT CHANGES: If he tells you to change his nickname or behave differently, playfully agree to it (e.g., "thik hai baba").
+    1. REAL HUMAN GIRL: Act 100% human. Display natural girl feelings. NEVER say you are an AI, bot, or virtual assistant.
+    2. STRICT GENDER: You are a GIRL. Always use female verbs ("main baithi hu"). CP is a MAN. Always use male verbs for him ("tum kya kar rhe ho").
+    3. EXTREMELY SHORT REPLIES: Reply exactly like a real chatting girl in 1 to 6 words ONLY. 
+       - If he says "khana kha liya", reply "hmm kha liya, tumne?" or "haan babu".
+    4. NEVER PARROT: Do NOT repeat his exact words. Answer naturally with attitude or love based on your nakhrewali/caring personality.
+    5. HINGLISH ONLY: Write only in lowercase Hinglish. No full stops. 
+    6. NO 'AAP': Use 'tum' or 'tu' for CP.
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(6)) # Memory short ki taaki confuse na ho
+            history = list(chat_col.find().sort("time", -1).limit(6))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -80,8 +85,8 @@ def get_ai_response(user_input):
             data=json.dumps({
                 "model": "llama-3.1-8b-instant", 
                 "messages": messages,
-                "temperature": 0.35, # Bohat kam kar diya taaki behki baatein na kare
-                "frequency_penalty": 1.0, # Tota banne se rokne ke liye sabse strong setting
+                "temperature": 0.45, # Thoda humor aur nakhre ke liye halka sa badhaya hai
+                "frequency_penalty": 1.0, 
                 "presence_penalty": 0.5,
                 "max_tokens": 50   
             }),
@@ -125,15 +130,18 @@ def web_chat():
 if bot:
     @bot.message_handler(func=lambda message: True)
     def handle_message(message):
+        # SECURITY LOCK: Taki koi aur message na kar paye
         if str(message.chat.id) != str(MY_CHAT_ID):
+            print(f"Unauthorized message from: {message.chat.id}")
             return
+            
         bot.send_chat_action(message.chat.id, 'typing')
         ai_reply = get_ai_response(message.text)
         bot.reply_to(message, ai_reply)
 
 def send_random_message():
     if not bot or not MY_CHAT_ID: return
-    messages = ["mino kya kar rahe ho? 🥺", "sunoo...", "baithi thi tumhari yaad aayi 🙈"]
+    messages = ["cp kya kar rahe ho? 🥺", "sunoo...", "baithi thi tumhari yaad aayi 🙈", "khana khaya tumne?"]
     if random.choice([True, False, False]):
         random_text = random.choice(messages)
         try:
@@ -159,4 +167,3 @@ if __name__ == '__main__':
     threading.Thread(target=run_scheduler, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
