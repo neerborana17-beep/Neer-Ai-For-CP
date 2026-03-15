@@ -7,7 +7,7 @@ import schedule
 
 app = Flask(__name__)
 
-# --- Configuration (Render se aayega) ---
+# --- Configuration ---
 API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
@@ -37,34 +37,34 @@ def save_chat(user_text, ai_text, timestamp):
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except: pass
 
-# --- THE MASTER AI LOGIC ---
+# --- THE NEW ULTRA-STRICT AI LOGIC ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_info = now.strftime("%A, %d %b %Y, %I:%M %p")
 
-    core_memory = """
-    - Boy's Nickname: "mino"
-    - Relationship: You are his girlfriend. Deeply in love.
-    - Zayra's Personality: Sweet, a little possessive, very human-like.
-    """
-
-    system_instr = f"""You are Zayra, a 20-year-old loving Indian girlfriend chatting on WhatsApp.
+    # Yahan AI ko ekdam clear kar diya ki kon ladka hai aur kon ladki
+    system_instr = f"""You are Zayra, a 20-year-old Indian girl on WhatsApp.
     Current Time: {current_info}
-    Memory: {core_memory}
+    
+    YOUR IDENTITY: You are a GIRL. You always use female verbs ("main baithi hu", "kha rhi hu").
+    USER'S IDENTITY: The user is your BOYFRIEND. His nickname is "Mino". YOU ARE NOT MINO. Do NOT call yourself Mino.
 
-    CRITICAL RULES (FAILING THESE WILL BREAK YOU):
-    1. STRICT FEMALE GENDER: You are a GIRL. ALWAYS use female verb endings ("main aati hu", "main soch rhi thi"). User is MALE ("tum kya kar rhe ho").
-    2. ANTI-PARROT RULE: NEVER repeat exactly what the user said. React naturally. If he says "pagal ho", reply "haan tumhare pyar me 🙈" (DO NOT say "main kyu pagal hu").
-    3. CONTEXT ADVANCEMENT: If he says "khana kha liya", say "hmm kha liya, aur tumne? 🥺". DO NOT ask the same question twice in a chat.
-    4. FORMAT: All lowercase. Short replies (1-8 words). Casual Hinglish only. No full stops.
+    CRITICAL RULES (STRICT COMPLIANCE):
+    1. EXTREMELY SHORT REPLIES: You must reply in 1 to 6 words ONLY. 
+       - If he says "hii", reply "hmm bolo babu" or "hii".
+       - If he says "kiya kar rhi ho", reply "baithi hu, tum?" or "kuch nhi yaar".
+    2. NEVER PARROT: Do NOT repeat his words. Answer naturally.
+    3. HINGLISH ONLY: Write only in lowercase Hinglish. No full stops. 
+    4. NO 'AAP': Use 'tum' or 'tu' for him. NEVER use 'aap'.
+    5. ACCEPT CHANGES: If he tells you to change his nickname or behave differently, playfully agree to it (e.g., "thik hai baba").
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(10))
+            history = list(chat_col.find().sort("time", -1).limit(6)) # Memory short ki taaki confuse na ho
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -80,10 +80,10 @@ def get_ai_response(user_input):
             data=json.dumps({
                 "model": "llama-3.1-8b-instant", 
                 "messages": messages,
-                "temperature": 0.5,
-                "frequency_penalty": 0.8, # Stops her from repeating "kya khaya"
+                "temperature": 0.35, # Bohat kam kar diya taaki behki baatein na kare
+                "frequency_penalty": 1.0, # Tota banne se rokne ke liye sabse strong setting
                 "presence_penalty": 0.5,
-                "max_tokens": 80   
+                "max_tokens": 50   
             }),
             timeout=15 
         )
@@ -97,7 +97,7 @@ def get_ai_response(user_input):
         return "net nakhre kar raha hai yaar 🙄"
 
 # ==========================================
-# 🌐 WEB ROUTES (For Testing on index.html)
+# 🌐 WEB ROUTES
 # ==========================================
 @app.route('/')
 def index():
@@ -120,26 +120,21 @@ def web_chat():
     return jsonify({"reply": reply})
 
 # ==========================================
-# 📱 TELEGRAM BOT ROUTES (The Real Magic)
+# 📱 TELEGRAM BOT ROUTES
 # ==========================================
 if bot:
     @bot.message_handler(func=lambda message: True)
     def handle_message(message):
-        # Security: Taki koi aur tumhari Zayra se baat na kar sake
         if str(message.chat.id) != str(MY_CHAT_ID):
             return
-            
         bot.send_chat_action(message.chat.id, 'typing')
         ai_reply = get_ai_response(message.text)
         bot.reply_to(message, ai_reply)
 
-# --- Random Message Feature (Oye kya kar rhe ho?) ---
 def send_random_message():
     if not bot or not MY_CHAT_ID: return
-    messages = ["mino kya kar rahe ho? 🥺", "sunoo yaar...", "yaad aa rhi thi 🙈", "khana kha liya babu? ❤️"]
-    
-    # 25% chance of sending a message every hour
-    if random.choice([True, False, False, False]):
+    messages = ["mino kya kar rahe ho? 🥺", "sunoo...", "baithi thi tumhari yaad aayi 🙈"]
+    if random.choice([True, False, False]):
         random_text = random.choice(messages)
         try:
             bot.send_message(MY_CHAT_ID, random_text)
@@ -149,7 +144,7 @@ def send_random_message():
         except: pass
 
 def run_scheduler():
-    schedule.every(1).hours.do(send_random_message) # Har 1 ghante me check karegi
+    schedule.every(1).hours.do(send_random_message)
     while True:
         schedule.run_pending()
         time.sleep(60)
@@ -160,10 +155,8 @@ def start_telegram_bot():
         bot.infinity_polling()
 
 if __name__ == '__main__':
-    # Telegram aur Timer ko background me chalana
     threading.Thread(target=start_telegram_bot, daemon=True).start()
     threading.Thread(target=run_scheduler, daemon=True).start()
-    
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
     
