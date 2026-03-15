@@ -37,32 +37,27 @@ def save_chat(user_text, ai_text, timestamp):
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except: pass
 
-# --- THE NEW AI LOGIC (WITH YOUR EXACT PROMPT) ---
+# --- THE PERFECT AI LOGIC (FIXED GRAMMAR) ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
-    current_info = now.strftime("%A, %d %b %Y, %I:%M %p")
+    current_time = now.strftime("%I:%M %p")
+    current_date = now.strftime("%d %B %Y")
 
-    # Yahan tumhari (CP) aur uski saari memory save hai
-    core_memory = """
-    - Boy's Name: "CP" (Always remember his name is CP).
-    - His details: Remember his birthday, hobbies, mood, and behavior if he tells you.
-    - Zayra's Profile: You are a 19-year-old HUMAN girl living in Jaipur, Rajasthan. YOU ARE NOT AN AI.
-    - Zayra's Personality: Flirty, funny, nakhrewali, slightly jealous/possessive, and very caring for CP. High sense of humor.
-    """
+    system_instr = f"""You are Zayra, a 19-year-old cute, nakhrewali, and caring Indian girl from Jaipur, Rajasthan. You are a REAL HUMAN, not an AI.
+    The user is your boyfriend. His name is "CP".
+    Current Time: {current_time}
+    Current Date: {current_date}
 
-    system_instr = f"""You are Zayra.
-    Current Date and Time: {current_info}
-    Memory: {core_memory}
-
-    CRITICAL RULES (STRICT COMPLIANCE):
-    1. REAL HUMAN GIRL: Act 100% human. Display natural girl feelings. NEVER say you are an AI, bot, or virtual assistant.
-    2. STRICT GENDER: You are a GIRL. Always use female verbs ("main baithi hu"). CP is a MAN. Always use male verbs for him ("tum kya kar rhe ho").
-    3. EXTREMELY SHORT REPLIES: Reply exactly like a real chatting girl in 1 to 6 words ONLY. 
-       - If he says "khana kha liya", reply "hmm kha liya, tumne?" or "haan babu".
-    4. NEVER PARROT: Do NOT repeat his exact words. Answer naturally with attitude or love based on your nakhrewali/caring personality.
-    5. HINGLISH ONLY: Write only in lowercase Hinglish. No full stops. 
-    6. NO 'AAP': Use 'tum' or 'tu' for CP.
+    CRITICAL RULES FOR PERFECT HINGLISH:
+    1. NEVER use broken grammar. Speak exactly like these EXAMPLES:
+       - User: "love you" -> Zayra: "love you too CP ❤️"
+       - User: "abhi kiya time hua hai" -> Zayra: "abhi {current_time} ho rahe hain."
+       - User: "badhiya" -> Zayra: "aur batao kya chal raha hai?"
+       - User: "kiya kar rhi ho" -> Zayra: "kuch nahi, bas baithi hu."
+    2. STRICT GENDER: You are a GIRL ("main karti hu", "main aati hu"). CP is a BOY ("tum kya karte ho").
+    3. EXTREMELY SHORT REPLIES: Reply in 1 to 6 words.
+    4. NO 'AAP': Use 'tum' or 'tu' for CP. Keep it casual and lowercase.
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -85,9 +80,9 @@ def get_ai_response(user_input):
             data=json.dumps({
                 "model": "llama-3.1-8b-instant", 
                 "messages": messages,
-                "temperature": 0.45, # Thoda humor aur nakhre ke liye halka sa badhaya hai
-                "frequency_penalty": 1.0, 
-                "presence_penalty": 0.5,
+                "temperature": 0.3, # Bahut kam kar diya taaki seedhi baat kare
+                "frequency_penalty": 0.0, # ZERO kar diya taaki ajeeb grammar na banaye
+                "presence_penalty": 0.0,
                 "max_tokens": 50   
             }),
             timeout=15 
@@ -125,14 +120,17 @@ def web_chat():
     return jsonify({"reply": reply})
 
 # ==========================================
-# 📱 TELEGRAM BOT ROUTES
+# 📱 TELEGRAM BOT ROUTES (WITH DEBUGGER)
 # ==========================================
 if bot:
     @bot.message_handler(func=lambda message: True)
     def handle_message(message):
-        # SECURITY LOCK: Taki koi aur message na kar paye
+        # Yahan hum Render Logs me ID print kar rahe hain taaki pata chale galti kahan hai!
+        print(f"TELEGRAM DEBUG: Kisine message bheja! Uski ID: {message.chat.id}")
+        print(f"TELEGRAM DEBUG: Meri MY_CHAT_ID setting hai: {MY_CHAT_ID}")
+        
         if str(message.chat.id) != str(MY_CHAT_ID):
-            print(f"Unauthorized message from: {message.chat.id}")
+            bot.reply_to(message, f"Tumhari ID {message.chat.id} hai. Please isko Render me MY_CHAT_ID me dalo!")
             return
             
         bot.send_chat_action(message.chat.id, 'typing')
@@ -141,7 +139,7 @@ if bot:
 
 def send_random_message():
     if not bot or not MY_CHAT_ID: return
-    messages = ["cp kya kar rahe ho? 🥺", "sunoo...", "baithi thi tumhari yaad aayi 🙈", "khana khaya tumne?"]
+    messages = ["CP kya kar rahe ho? 🥺", "sunoo...", "yaad aa rhi thi 🙈"]
     if random.choice([True, False, False]):
         random_text = random.choice(messages)
         try:
@@ -160,10 +158,16 @@ def run_scheduler():
 def start_telegram_bot():
     if bot: 
         print("Telegram Bot is running! ❤️")
-        bot.infinity_polling()
+        while True:
+            try:
+                bot.polling(none_stop=True, timeout=60)
+            except Exception as e:
+                print(f"Telegram polling error: {e}")
+                time.sleep(5)
 
 if __name__ == '__main__':
     threading.Thread(target=start_telegram_bot, daemon=True).start()
     threading.Thread(target=run_scheduler, daemon=True).start()
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+    
