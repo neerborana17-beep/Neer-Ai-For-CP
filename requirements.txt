@@ -4,5 +4,3 @@ pymongo[srv]
 gunicorn
 pytz
 certifi
-pyTelegramBotAPI
-schedule
