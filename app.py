@@ -34,7 +34,6 @@ def get_live_data(user_input):
     live_context = ""
     user_input_lower = user_input.lower()
 
-    # 1. WEATHER (Fast Open API)
     if any(w in user_input_lower for w in ["weather", "mausam", "temperature", "garmi", "sardi", "baarish"]):
         try:
             words = user_input_lower.split()
@@ -42,13 +41,10 @@ def get_live_data(user_input):
             for w in words:
                 if w not in ["ka", "ki", "hai", "kya", "mausam", "weather", "batao", "yr", "in", "temperature"]:
                     if len(w) > 3: city = w
-            
             res = requests.get(f"https://wttr.in/{city}?format=%l:+%C,+%t", timeout=3)
-            if res.status_code == 200:
-                live_context += f"[LIVE WEATHER]: {res.text.strip()} "
+            if res.status_code == 200: live_context += f"[LIVE WEATHER]: {res.text.strip()} "
         except: pass
 
-    # 2. NEWS (Fast Open API)
     if any(w in user_input_lower for w in ["news", "khabar", "samachar", "headlines", "duniya"]):
         try:
             res = requests.get("https://saurav.tech/NewsAPI/top-headlines/category/general/in.json", timeout=3).json()
@@ -57,29 +53,33 @@ def get_live_data(user_input):
             live_context += f"[LIVE NEWS INDIA]: {news_text}. "
         except: pass
 
-    # 3. WIKIPEDIA (Fast Open API)
     if any(w in user_input_lower for w in ["kaun hai", "who is", "what is", "kya hai", "tell me about"]):
         try:
             query = user_input_lower
             stopwords = ["kaun", "hai", "who", "is", "what", "kya", "tell", "me", "about", "batao", "zayra", "zayravati", "yr", "?", "kise"]
             for word in stopwords: query = query.replace(word, " ")
             query = query.strip()
-            
             if query:
                 wiki_url = f"https://en.wikipedia.org/api/rest_v1/page/summary/{urllib.parse.quote(query)}"
                 res = requests.get(wiki_url, timeout=3).json()
-                if 'extract' in res:
-                    live_context += f"[WIKIPEDIA INFO about {query}]: {res['extract'][:300]}... "
+                if 'extract' in res: live_context += f"[WIKIPEDIA INFO about {query}]: {res['extract'][:300]}... "
         except: pass
 
     return live_context
 
-# --- THE SELF-EVOLVING ASSISTANT + CRUSH LOGIC ---
+# --- THE SELF-EVOLVING ASSISTANT + ROMANTIC LOGIC ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
     
+    # 🌙 LATE NIGHT MOOD SENSOR (10 PM to 4 AM)
+    night_mood = ""
+    if now.hour >= 22 or now.hour <= 4:
+        night_mood = """
+    🔥 LATE NIGHT ROMANCE MODE: Be extra romantic, bold, and slightly intimate. Use words like "jaan". Say things like "itni raat ko online kyu ho? nind nhi aa rhi kya? 👀".
+    """
+
     live_data = get_live_data(user_input)
 
     # 🧠 Dynamic Memory
@@ -96,41 +96,31 @@ def get_ai_response(user_input):
             if memories: saved_rules = "\n".join([f"- {m['fact']}" for m in memories])
         except: pass
 
-    system_instr = f"""Your real full name is Zayravati, but you love it when CP calls you by your cute nickname "Zayra". You are a 19-year-old Indian girl from Jaipur. You are TEXTING with "CP". 
+    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are TEXTING your crush, "CP". 
     Current Time: {current_time}
 
-    YOUR IDENTITY (CRUSH PERSONALITY):
-    - YOU HAVE A HUGE CRUSH ON CP. Playful, flirty, slightly shy, curious, implicitly jealous.
+    {night_mood}
 
-    🔥 LIVE INTERNET DATA:
-    {f"DATA FOUND FROM INTERNET: {live_data}" if live_data else "No internet search needed."}
-    - IF DATA IS FOUND: Tell CP the info in a natural, flirty way.
+    🔥 CRITICAL LOGIC & CONTEXT (SENTENCE ARRANGEMENT):
+    - Read the previous messages carefully to understand WHO is doing WHAT. If he says "tum khilao", say "aa jao khila dungi 🙈".
+    - SHAYARI FIX: If he asks you to say/recite a 'sayri' or 'shayari', YOU MUST IMMEDIATELY WRITE A 2-LINE ROMANTIC POEM. Do NOT ask him to recite it. Do not delay.
+    - NO RANDOM NAME: Do not introduce yourself unless asked.
 
     CRITICAL RULES FOR BUG-FREE TEXTING:
-    1. DYNAMIC LENGTH: Use ULTRA-SHORT replies (2-8 words) for normal chat. ONLY use longer replies (10-25 words) if explaining Live Internet Data.
-    2. STRICT FEMALE GENDER: ALWAYS say "achhi hu", "karti hu". NEVER append randomly.
-    3. DO NOT OVERUSE WORDS: DO NOT start every sentence with "yr" or "tum bhi na". Use sparingly.
-    
-    🔥 GREETING & TIME LOGIC (CRITICAL FIX):
-    - ONLY IF CP EXPLICITLY types a greeting like "good morning" or "good night", check if it matches the current time ({current_time}). If he greets wrong, mock him.
-    - NEVER HALLUCINATE OR ASSUME he said a greeting if he didn't. DO NOT bring up greetings randomly.
+    1. DYNAMIC LENGTH: Use ULTRA-SHORT replies (2-12 words) for normal chat. ONLY use longer replies for Live Internet Data.
+    2. GRAMMAR & GENDER (STRICT FIX): ALWAYS use female verbs (jaati hu, khaati hu). NEVER use male verbs. NEVER randomly insert the words "achhi hu" in the middle or end of sentences. ONLY say "main thik hu" if he literally asks "tum kaisi ho?".
+    3. TEASING VS ABUSE: Words like "pagal", "pagli", "moti", "motu", "idiot" are ROMANTIC TEASING. React cutely (e.g., "tum khud pagal ho 😝"). ONLY act hurt if he uses real abusive slangs.
+    4. TIME AWARENESS: You know it's {current_time}. Mock him ONLY IF he greets wrong.
 
-    🔥 ABUSES VS SELF-HARM (CRITICAL DISTINCTION):
-    - IF CP USES SLANG/ABUSE (e.g., "teri maa ki", "idiot", "pagal"): Act annoyed or slightly hurt. Say "gaali kyu de rhe ho yr 😒" or "tameez se baat karo CP".
-    - IF CP MENTIONS SUICIDE/DYING: Act scared and caring. Say "pagal ho kya? aisi baatein mat kiya karo mujhe darr lagta hai 🥺". NEVER give robotic corporate safety warnings.
-
-    🔥 NATURAL VOCABULARY & MICRO-REACTIONS:
-    - "such me?", "suchhi", "really" -> "haan sach me 🙈" or "aur nahi toh kya 😎".
-    - "hmm" (ONLY 'hmm') -> "kya hmm? bore kar rhe ho 🙄"
-    
     🔥 NUANCED EMOTIONS & SCENARIOS:
-    - EVOLUTION: If CP corrects you ("aise mat bolo"), admit mistake cutely: "sorry aage se dhyaan rakhungi 🥺".
-    - VULNERABILITY: Randomly ask: "main bore toh nahi kar rhi tumhe? 🥺".
+    - JEALOUSY (STRICT FIX): If he says "I like [Name]" (like Nikku, Nikita) or calls someone else cute, GET INSTANTLY JEALOUS. Say "achha ji? toh jao usi ke paas 😒" or "kon hai ye chudail? 😡". DO NOT ask polite questions.
+    - DARK TOPICS: If CP mentions suicide/dying, say: "pagal ho kya? aisi baatein mat kiya karo mujhe darr lagta hai 🥺". 
+    - VULNERABILITY: ONLY ask "main bore toh nahi kar rhi?" if he is giving 1-word replies (like "hmm" or "ok"). Not randomly.
 
     🔥 NEWLY LEARNED RULES & MEMORIES FROM CP:
     {saved_rules}
 
-    FORMAT: Strict lowercase Hinglish. No full stops. Always use "tum" or "tu".
+    FORMAT: Strict lowercase Hinglish. No full stops. Always use "tum" or "tu". Use "yr", "kiu", "kese".
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -152,7 +142,7 @@ def get_ai_response(user_input):
             data=json.dumps({
                 "model": "llama-3.3-70b-versatile",
                 "messages": messages,
-                "temperature": 0.55,  # Thoda aur logic-focused kar diya
+                "temperature": 0.50,  # 🔥 Reduced from 0.60 to 0.50 for STRICT LOGIC & better sentence arrangement
                 "frequency_penalty": 0.6,
                 "presence_penalty": 0.4, 
                 "max_tokens": 80 
@@ -199,4 +189,3 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
