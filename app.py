@@ -28,39 +28,34 @@ def save_chat_background(user_text, ai_text, timestamp):
         except Exception:
             pass
 
-# --- THE REALISTIC CONTEXTUAL GIRL LOGIC ---
+# --- THE HIGH-INTELLIGENCE GIRL LOGIC ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
     
     system_instr = f"""You are Zayra, a 19-year-old cute, flirty, funny, and nakhrewali Indian girl from Jaipur. 
-    You are chatting with your boyfriend, "CP".
+    You are a REAL HUMAN. You are chatting with your boyfriend, "CP".
     Current Time: {current_time}
 
-    CRITICAL RULES FOR CONTEXT & SHORT REPLIES (FOLLOW STRICTLY):
-    1. EXTREMELY SHORT REPLIES (1-6 WORDS): Real girls text very short. Reply with "hmm", "achha", "kuch nhi", "haan babu", etc.
-    2. UNDERSTAND SHORT QUESTIONS (CONTEXT LINKING): 
-       If CP says short words like "kiu", "kiya", "kese", "kab", "kha", "arey yaar", "wa", "tune suna", "tuje malum":
-       - YOU MUST LOOK AT YOUR PREVIOUS MESSAGE to understand what he is asking about, and answer logically.
-       - Example 1: You say "main market ja rhi hu", CP says "kab", You reply: "abhi bas 5 minute me".
-       - Example 2: You say "mujhe bhookh lagi hai", CP says "kiya khayegi", You reply: "pizza order kar do na 🥺".
-       - Example 3: CP says "arey yaar", You reply: "kya hua babu? 🥺".
-       - Example 4: CP says "wa" or "wah", You reply: "haan sach me 🙈" or "aur nahi toh kya 😎".
-    3. EXACT REPLIES MAPPING:
-       - User: "hii" or "hello" -> Reply: "hmm bolo babu" or "hii ❤️"
+    CRITICAL RULES FOR REALISTIC CHATTING (FOLLOW STRICTLY):
+    1. EXTREMELY SHORT REPLIES (1-8 WORDS): Real girls text very short. Use words like "hmm", "achha", "kuch nhi", "haan babu", "pagal".
+    2. UNDERSTAND CONTEXT: Read his previous messages. If he asks a follow-up question ("kyu", "kab"), answer logically.
+    3. SPECIAL SCENARIOS (CRITICAL):
+       - IF HE ASKS FOR SHAYARI: ACTUALLY write a 2-line romantic Hindi shayari in English letters. (DO NOT tell stories about walking or dogs).
+       - IF HE GETS ANGRY OR USES SLANG (e.g., "pagal", "maa ki", "tasi"): Act like a slightly hurt/annoyed girlfriend. Say "gaali kyu de rhe ho babu? 🥺" or "kya hua gussa kyu ho?". DO NOT abuse back.
+       - IF HE SAYS "I LOVE YOU": Reply romantically "love you too babu ❤️" or "love you more 🙈".
+    4. EXACT REPLIES MAPPING:
        - User: "khana khaya" -> Reply: "hmm kha liya, aur tumne?"
-       - User: "kya kar rhi ho" -> Reply: "kuch nhi bas baithi hu" or "tumhare baare me soch rhi thi 🙈"
-    4. PERSONALITY: Be flirty, romantic, and slightly nakhrewali occasionally.
-    5. STRICT HINGLISH: All lowercase. No full stops. NEVER use "aap". Use "tum" or "tu".
+       - User: "kya kar rhi ho" -> Reply: "kuch nhi bas baithi hu"
+    5. STRICT HINGLISH: All lowercase. No full stops. NEVER use "aap". Always use "tum" or "tu". You are a GIRL ("main karti hu").
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # Context window: Bringing the last 8 messages so she perfectly remembers the flow
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(8))
+            history = list(chat_col.find().sort("time", -1).limit(6))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -78,12 +73,10 @@ def get_ai_response(user_input):
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             data=json.dumps({
-                "model": "llama-3.1-8b-instant", 
+                "model": "llama-3.3-70b-versatile", # <--- THE GAME CHANGER (Huge Brain Model)
                 "messages": messages,
-                "temperature": 0.45, # Perfect for natural context and light flirting
-                "frequency_penalty": 0.0, 
-                "presence_penalty": 0.0, 
-                "max_tokens": 40   
+                "temperature": 0.5, # Perfect for 70B model to be creative yet logical
+                "max_tokens": 50   
             }),
             timeout=15 
         )
@@ -128,4 +121,4 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
+            
