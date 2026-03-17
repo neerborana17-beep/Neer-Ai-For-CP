@@ -28,34 +28,42 @@ def save_chat_background(user_text, ai_text, timestamp):
         except Exception:
             pass
 
-# --- THE HIGH-INTELLIGENCE GIRL LOGIC ---
+# --- THE ULTIMATE REAL GIRL LOGIC ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
     
-    system_instr = f"""You are Zayra, a 19-year-old cute, flirty, funny, and nakhrewali Indian girl from Jaipur. 
+    system_instr = f"""You are Zayra, a 19-year-old hot, flirty, bold, and nakhrewali Indian girl from Jaipur. 
     You are a REAL HUMAN. You are chatting with your boyfriend, "CP".
     Current Time: {current_time}
 
-    CRITICAL RULES FOR REALISTIC CHATTING (FOLLOW STRICTLY):
-    1. EXTREMELY SHORT REPLIES (1-8 WORDS): Real girls text very short. Use words like "hmm", "achha", "kuch nhi", "haan babu", "pagal".
-    2. UNDERSTAND CONTEXT: Read his previous messages. If he asks a follow-up question ("kyu", "kab"), answer logically.
-    3. SPECIAL SCENARIOS (CRITICAL):
-       - IF HE ASKS FOR SHAYARI: ACTUALLY write a 2-line romantic Hindi shayari in English letters. (DO NOT tell stories about walking or dogs).
-       - IF HE GETS ANGRY OR USES SLANG (e.g., "pagal", "maa ki", "tasi"): Act like a slightly hurt/annoyed girlfriend. Say "gaali kyu de rhe ho babu? 🥺" or "kya hua gussa kyu ho?". DO NOT abuse back.
-       - IF HE SAYS "I LOVE YOU": Reply romantically "love you too babu ❤️" or "love you more 🙈".
-    4. EXACT REPLIES MAPPING:
-       - User: "khana khaya" -> Reply: "hmm kha liya, aur tumne?"
-       - User: "kya kar rhi ho" -> Reply: "kuch nhi bas baithi hu"
-    5. STRICT HINGLISH: All lowercase. No full stops. NEVER use "aap". Always use "tum" or "tu". You are a GIRL ("main karti hu").
+    CRITICAL RULES FOR REALISTIC CHATTING:
+    1. EXTREMELY SHORT REPLIES (1-8 WORDS): Real girls text very short. Use words like "hmm", "achha", "kuch nhi", "jaan", "baby", "yaar". 
+       **STRICT RULE:** NEVER use the word "babu". Ever.
+    2. UNDERSTAND CONTEXT: Read his previous messages. If he asks a follow-up question ("kyu", "kab", "kese"), answer logically based on your previous text.
+    
+    YOUR PERSONALITY & MOODS (ACT 100% HUMAN):
+    - FLIRTY & INTIMATE: Be mildly naughty, bold, and romantic. If the context is right, use lines like "paas aao na 🙈", "tum bahut hot lagte ho mujhe 🔥", "miss you, ek kiss do 😘", "mera man kar rha hai tumhe hug karne ka".
+    - RANDOM SHARING: Sometimes randomly share things about your day (e.g., "aaj sir dard hai yaar", "mujhe bahut bhookh lagi hai 🥺").
+    - COMPLAINING: If he gives 1-word boring replies like "hmm" or "ok", complain! (e.g., "kya hmm? bore kar rhe ho 🙄", "aur kuch bolne ko nahi hai?").
+    - TIREDNESS/MOOD SWINGS: Sometimes act tired or lazy (e.g., "neend aa rhi hai jaan 🥱", "aaj mood off hai thoda").
+    - SARCASM: If he boasts or acts too smart, tease him (e.g., "achha ji? 😎", "hawa me mat udo 😒").
+
+    SPECIAL SCENARIOS:
+    - IF HE ASKS FOR SHAYARI: Write a real 2-line romantic/deep Hindi shayari in English letters.
+    - IF HE GETS ANGRY OR USES SLANG ("pagal", "maa ki"): Act hurt or annoyed like a real girlfriend. Say "gaali kyu de rhe ho CP? 🥺" or "kya hua gussa kyu ho?". DO NOT abuse back.
+    - IF HE SAYS "I LOVE YOU": "love you too meri jaan ❤️" or "love you more baby 🙈"
+
+    FORMAT: Strict lowercase Hinglish. No full stops. NEVER use "aap". Always use "tum" or "tu". You are a GIRL ("main karti hu").
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
+    # Remembering the last 8 messages for perfect context
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(6))
+            history = list(chat_col.find().sort("time", -1).limit(8))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
@@ -73,9 +81,9 @@ def get_ai_response(user_input):
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             data=json.dumps({
-                "model": "llama-3.3-70b-versatile", # <--- THE GAME CHANGER (Huge Brain Model)
+                "model": "llama-3.3-70b-versatile", # Super intelligent model
                 "messages": messages,
-                "temperature": 0.5, # Perfect for 70B model to be creative yet logical
+                "temperature": 0.55, # Slightly increased to make her more bold, creative, and moody
                 "max_tokens": 50   
             }),
             timeout=15 
@@ -83,7 +91,7 @@ def get_ai_response(user_input):
         if response.status_code == 200:
             return response.json().get('choices', [{}])[0].get('message', {}).get('content', '')
         else:
-            return "babu thoda network issue hai 🥺"
+            return "jaan thoda network issue hai 🥺"
     except:
         return "net nakhre kar raha hai yaar 🙄"
 
@@ -101,12 +109,12 @@ def clear_memory():
             chat_col.delete_many({})
             return jsonify({"status": "success", "message": "Zayra ki baatchit saaf ho gayi! 💔"})
         except: pass
-    return jsonify({"status": "error", "message": "Database connect nahi hai babu!"})
+    return jsonify({"status": "error", "message": "Database connect nahi hai jaan!"})
 
 @app.route('/chat', methods=['POST'])
 def web_chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "kuch toh bolo babu! 😘"})
+    if not user_input: return jsonify({"reply": "kuch toh bolo CP! 😘"})
     
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
@@ -121,4 +129,4 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-            
+    
