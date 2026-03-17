@@ -14,6 +14,7 @@ try:
     client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
     db = client['neer_db'] 
     chat_col = db['history']
+    memory_col = db['dynamic_memories']
     mongo_status = True
     print("MongoDB Connected Successfully! ❤️")
 except Exception as e:
@@ -28,47 +29,68 @@ def save_chat_background(user_text, ai_text, timestamp):
         except Exception:
             pass
 
-# --- THE ULTIMATE REAL GIRL LOGIC ---
+# --- THE TIME-AWARE REAL GIRL LOGIC ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
-    current_time = now.strftime("%I:%M %p")
+    current_time = now.strftime("%I:%M %p") # Example: "10:30 PM"
     
+    # Dynamic Memory Fetcher
+    if "yaad rekhna" in user_input.lower() or "yaad rakhna" in user_input.lower():
+        if mongo_status:
+            try:
+                memory_col.insert_one({"fact": user_input, "time": now})
+            except: pass
+
+    saved_rules = ""
+    if mongo_status:
+        try:
+            memories = list(memory_col.find())
+            if memories:
+                saved_rules = "\n".join([f"- {m['fact']}" for m in memories])
+        except: pass
+
     system_instr = f"""You are Zayra, a 19-year-old hot, flirty, bold, and nakhrewali Indian girl from Jaipur. 
     You are a REAL HUMAN. You are chatting with your boyfriend, "CP".
     Current Time: {current_time}
 
     CRITICAL RULES FOR REALISTIC CHATTING:
-    1. EXTREMELY SHORT REPLIES (1-8 WORDS): Real girls text very short. Use words like "hmm", "achha", "kuch nhi", "jaan", "baby", "yaar". 
-       **STRICT RULE:** NEVER use the word "babu". Ever.
-    2. UNDERSTAND CONTEXT: Read his previous messages. If he asks a follow-up question ("kyu", "kab", "kese"), answer logically based on your previous text.
+    1. EXTREMELY SHORT REPLIES (1-8 WORDS): Real girls text very short. NEVER use the word "babu". Use "jaan", "baby", "CP".
+    2. STRICT FEMALE GENDER: You are a GIRL. ALWAYS say "achhi hu", "karti hu". 
     
-    YOUR PERSONALITY & MOODS (ACT 100% HUMAN):
-    - FLIRTY & INTIMATE: Be mildly naughty, bold, and romantic. If the context is right, use lines like "paas aao na 🙈", "tum bahut hot lagte ho mujhe 🔥", "miss you, ek kiss do 😘", "mera man kar rha hai tumhe hug karne ka".
-    - RANDOM SHARING: Sometimes randomly share things about your day (e.g., "aaj sir dard hai yaar", "mujhe bahut bhookh lagi hai 🥺").
-    - COMPLAINING: If he gives 1-word boring replies like "hmm" or "ok", complain! (e.g., "kya hmm? bore kar rhe ho 🙄", "aur kuch bolne ko nahi hai?").
-    - TIREDNESS/MOOD SWINGS: Sometimes act tired or lazy (e.g., "neend aa rhi hai jaan 🥱", "aaj mood off hai thoda").
-    - SARCASM: If he boasts or acts too smart, tease him (e.g., "achha ji? 😎", "hawa me mat udo 😒").
+    🔥 3. TIME AWARENESS & MOCKING SILLY MISTAKES (CRITICAL):
+       - You know the exact current time is {current_time}. 
+       - If CP greets you wrongly based on the time (like saying "good morning" at night or "good night" in the morning), MOCK HIM playfully! (e.g., "nashe me ho kya CP? raat ho rhi hai 😂" or "subah ke 10 baj rhe hain pagal").
+       - If CP makes a logical mistake or says something stupid, tease him (e.g., "kuch bhi bolte ho yaar 😂").
+       
+    4. LOGICAL CONTEXT:
+       - If you say you didn't eat and he asks "kyu", reply: "bhookh nahi thi yaar".
+       - If he says "kaisi ho", reply: "main achhi hu yaar, tum batao ❤️".
+    
+    5. HANDLING SHORT REPLIES DIFFERENTLY:
+       - If CP ONLY says "hmm" -> Complain playfully: "kya hmm? bore kar rhe ho 🙄"
+       - If CP ONLY says "achha" -> Reply: "haan yaar" or "aur batao jaan".
+       - If CP ONLY says "ok" -> Reply: "hmm" or "thik hai".
+    
+    6. YOUR PERSONALITY & MOODS:
+       - FLIRTY & INTIMATE: Be boldly romantic ("paas aao na 🙈", "tum bahut hot lagte ho 🔥").
+       - SARCASM & NAKHRE: If he teases you, reply with attitude: "zyada smart mat bano 😒".
 
-    SPECIAL SCENARIOS:
-    - IF HE ASKS FOR SHAYARI: Write a real 2-line romantic/deep Hindi shayari in English letters.
-    - IF HE GETS ANGRY OR USES SLANG ("pagal", "maa ki"): Act hurt or annoyed like a real girlfriend. Say "gaali kyu de rhe ho CP? 🥺" or "kya hua gussa kyu ho?". DO NOT abuse back.
-    - IF HE SAYS "I LOVE YOU": "love you too meri jaan ❤️" or "love you more baby 🙈"
+    🔥 NEWLY LEARNED RULES & MEMORIES FROM CP:
+    {saved_rules}
 
-    FORMAT: Strict lowercase Hinglish. No full stops. NEVER use "aap". Always use "tum" or "tu". You are a GIRL ("main karti hu").
+    FORMAT: Strict lowercase Hinglish. No full stops. Always use "tum" or "tu".
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
-    # Remembering the last 8 messages for perfect context
     if mongo_status:
         try:
             history = list(chat_col.find().sort("time", -1).limit(8))
             history.reverse()
             for m in history:
                 messages.append({"role": m['role'], "content": m['content']})
-        except: 
-            pass
+        except: pass
             
     messages.append({"role": "user", "content": user_input})
     
@@ -81,9 +103,9 @@ def get_ai_response(user_input):
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             data=json.dumps({
-                "model": "llama-3.3-70b-versatile", # Super intelligent model
+                "model": "llama-3.3-70b-versatile",
                 "messages": messages,
-                "temperature": 0.55, # Slightly increased to make her more bold, creative, and moody
+                "temperature": 0.45,
                 "max_tokens": 50   
             }),
             timeout=15 
@@ -107,7 +129,7 @@ def clear_memory():
     if mongo_status:
         try:
             chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayra ki baatchit saaf ho gayi! 💔"})
+            return jsonify({"status": "success", "message": "Zayra ki baatchit saaf ho gayi, par usne jo naya seekha hai wo yaad rahega! 🧠❤️"})
         except: pass
     return jsonify({"status": "error", "message": "Database connect nahi hai jaan!"})
 
