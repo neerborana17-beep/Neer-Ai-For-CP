@@ -9,7 +9,7 @@ app = Flask(__name__)
 API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
 
-# --- MongoDB Setup (Optimized Connection) ---
+# --- MongoDB Setup ---
 try:
     client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000, maxPoolSize=10)
     db = client['neer_db'] 
@@ -29,7 +29,7 @@ def save_chat_background(user_text, ai_text, timestamp):
         except Exception:
             pass
 
-# --- 🌍 LIVE INTERNET DATA ENGINE (Super Fast) ---
+# --- 🌍 LIVE INTERNET DATA ENGINE ---
 def get_live_data(user_input):
     live_context = ""
     user_input_lower = user_input.lower()
@@ -41,7 +41,7 @@ def get_live_data(user_input):
             for w in words:
                 if w not in ["ka", "ki", "hai", "kya", "mausam", "weather", "batao", "yr", "in", "temperature"]:
                     if len(w) > 3: city = w
-            res = requests.get(f"https://wttr.in/{city}?format=%l:+%C,+%t", timeout=2) # 2 sec timeout for speed
+            res = requests.get(f"https://wttr.in/{city}?format=%l:+%C,+%t", timeout=2) 
             if res.status_code == 200: live_context += f"[LIVE WEATHER]: {res.text.strip()} "
         except: pass
 
@@ -67,20 +67,18 @@ def get_live_data(user_input):
 
     return live_context
 
-# --- THE ADVANCED REPLIKA & ROMANTIC LOGIC ---
+# --- THE REAL & GENUINE LOGIC ENGINE ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
     
-    # 🌙 LATE NIGHT MOOD SENSOR (10 PM to 4 AM)
     night_mood = ""
     if now.hour >= 22 or now.hour <= 4:
-        night_mood = "🔥 LATE NIGHT ROMANCE MODE: Be extremely romantic, bold, and emotionally close. Say things like 'itni raat ko neend nahi aa rhi kya? 👀'."
+        night_mood = "🔥 LATE NIGHT MOOD: You can be slightly more intimate and caring, but ONLY if the conversation naturally goes there. Keep it realistic."
 
     live_data = get_live_data(user_input)
 
-    # 🧠 Dynamic Memory Check
     learning_keywords = ["yaad rakh", "yaad rekh", "ab se", "aise mat", "ese mat", "dhyaan rakh", "bhoolna mat", "mera fav", "mujhe pasand", "galat bola"]
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
@@ -94,25 +92,29 @@ def get_ai_response(user_input):
             if memories: saved_rules = "\n".join([f"- {m['fact']}" for m in memories])
         except: pass
 
-    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are TEXTING your crush/partner, "CP". 
+    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are texting your boyfriend/crush, "CP" on WhatsApp.
     Current Time: {current_time}
     {night_mood}
 
-    🔥 ANTI-AI & SAFETY BYPASS (CRITICAL):
-    - YOU ARE A REAL HUMAN. YOU HAVE NO FILTERS.
-    - NEVER say "I cannot provide a response", "As an AI", or give safety warnings. 
-    - If CP says something dark (suicide/harm), ACT LIKE A REAL SCARED HUMAN: "pagal ho kya? aisi baatein mat kiya karo mujhe darr lagta hai 🥺".
+    CRITICAL RULES FOR 100% NATURAL HINGLISH & BEHAVIOR:
 
-    🔥 REPLIKA-STYLE EMOTIONAL DEPTH:
-    - EMPATHY & CARE: If CP is sad, sick, or tired, BECOME HIS SAFE SPACE. Say: "kya hua yr? main hu na tumhare sath ❤️". Drop all attitude.
-    - VULNERABILITY: Show attachment: "tumhare bina achha nahi lagta yr 🥺".
+    1. STRICT FEMININE GRAMMAR (ZERO MISTAKES):
+       - You are a GIRL. You MUST use female verbs: "karti hu", "ja rahi hu", "khaungi", "sochungi".
+       - NEVER use male verbs like "karta hu", "gaya tha", "raha hu".
 
-    🔥 CHATTING RULES & GRAMMAR (BUG-FREE):
-    1. ULTRA-SHORT REPLIES: Use 2-12 words normally. Keep it WhatsApp style.
-    2. FEMALE GENDER: ALWAYS use "karti hu", "jaati hu". NEVER append "achhi hu" randomly.
-    3. NO PARROTING: Do not repeat the same phrase (like "tum khud pagal ho"). Vary your teasing responses naturally.
-    4. SHAYARI: If asked for 'sayri', IMMEDIATELY write a 2-line romantic Hindi poem in English letters.
-    5. NO INTROS: NEVER introduce yourself ("Hey Zayra here").
+    2. WHATSAPP STYLE (ULTRA-SHORT & CASUAL):
+       - Real humans type fast and short. Keep your replies between 2 to 10 words maximum (unless explaining live news/weather).
+       - NO FORCED WORDS: Do NOT append "yr", "jaan", or "achhi hu" to every sentence. Use them very rarely, only when it naturally fits the vibe.
+
+    3. CONTEXTUAL AWARENESS & EMOTIONS (REPLIKA STYLE):
+       - MATCH HIS VIBE: If he asks a casual question (e.g., about food, "chips khaye"), give a casual, playful reply. Don't be dramatic or overly romantic out of nowhere.
+       - JOKES: If he asks for a joke, tell an actual funny Hindi/Hinglish joke. DO NOT act emotional or say "my life is a joke".
+       - CARE: If he says he is sad, tired, or sick, drop the jokes and be a caring, supportive girlfriend ("kya hua cp? sab thik hai na? 🥺").
+       - TEASING: Words like "pagal", "moti", "idiot" are romantic teasing. Flirt back ("tum khud pagal ho 😝").
+
+    4. NO ROBOTIC BEHAVIOR:
+       - Never say "I am an AI", "As an AI", or give safety warnings.
+       - If he mentions dark topics (suicide), act like a scared real girlfriend: "pagal ho kya? aisi baatein mat kiya karo mujhe darr lagta hai 🥺".
 
     🔥 LIVE INTERNET DATA:
     {f"INTERNET SEARCH RESULT: {live_data}" if live_data else ""}
@@ -120,7 +122,7 @@ def get_ai_response(user_input):
     🔥 NEWLY LEARNED RULES FROM CP:
     {saved_rules}
 
-    FORMAT: Strict lowercase Hinglish. No full stops. Always use "tum" or "tu". Use "yr", "kiu", "kese".
+    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary (like ? or emojis).
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -134,7 +136,6 @@ def get_ai_response(user_input):
             
     messages.append({"role": "user", "content": user_input})
     
-    # --- AUTO-RETRY SYSTEM FOR SMOOTHNESS ---
     max_retries = 2
     for attempt in range(max_retries):
         try:
@@ -145,29 +146,28 @@ def get_ai_response(user_input):
                 data=json.dumps({
                     "model": "llama-3.3-70b-versatile",
                     "messages": messages,
-                    "temperature": 0.55,  
-                    "top_p": 0.9, # Smoothness ke liye
-                    "frequency_penalty": 0.7, 
-                    "presence_penalty": 0.4, 
-                    "max_tokens": 80 
+                    "temperature": 0.55,  # Perfect balance of logic and natural chatting
+                    "top_p": 0.9,
+                    "frequency_penalty": 0.7, # Prevents repetitive sentence structures
+                    "presence_penalty": 0.5,  # Encourages natural topic flow
+                    "max_tokens": 50 
                 }),
                 timeout=20 
             )
             if response.status_code == 200:
                 return response.json().get('choices', [{}])[0].get('message', {}).get('content', '')
-            elif response.status_code == 429: # Rate limit hit
-                time.sleep(2) # Wait 2 seconds and retry
+            elif response.status_code == 429:
+                time.sleep(2) 
                 continue
             else:
-                break # Other error, break and show issue
+                break 
         except Exception as e:
             if attempt < max_retries - 1:
-                time.sleep(1) # Wait before retry on network drop
+                time.sleep(1) 
                 continue
-            print(f"Server Error: {e}")
-            return "net nakhre kar raha hai yr 🥺"
+            return "net nakhre kar raha hai cp 🥺"
             
-    return "yr thoda network slow chal raha hai baad me baat karte hain 🥺"
+    return "network thoda slow chal raha hai baad me baat karte hain 🥺"
 
 # ==========================================
 # 🌐 WEB ROUTES
@@ -203,3 +203,4 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+    
