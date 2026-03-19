@@ -1,7 +1,6 @@
-flask
-requests
-pymongo[srv]
-gunicorn
+Flask
+pymongo
 pytz
 certifi
-pip install pinecone-client requests
+requests
+pinecone-client
