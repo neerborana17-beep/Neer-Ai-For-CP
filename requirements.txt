@@ -5,3 +5,4 @@ certifi
 requests
 pinecone
 gunicorn
+apscheduler
