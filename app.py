@@ -1,8 +1,8 @@
 import os, requests, json, pytz, certifi, urllib.parse, time
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
+from pinecone import Pinecone
 from datetime import datetime
-from pinecone import Pinecone, ServerlessSpec
 
 app = Flask(__name__)
 
@@ -24,7 +24,7 @@ except Exception as e:
     mongo_status = False
     print("MongoDB Connection Failed!")
 
-# --- 2. Pinecone Vector DB Setup (Long-Term Memory) ---
+# --- 2. Pinecone Vector DB Setup (Long-Term Memory - OPTIMIZED) ---
 pc = None
 index = None
 use_vector_db = False
@@ -34,19 +34,14 @@ if PINECONE_API_KEY and HF_TOKEN:
         pc = Pinecone(api_key=PINECONE_API_KEY)
         index_name = "zayra-memory"
         
-        if index_name not in pc.list_indexes().names():
-            pc.create_index(
-                name=index_name,
-                dimension=384, 
-                metric="cosine",
-                spec=ServerlessSpec(cloud="aws", region="us-east-1")
-            )
+        # हम सीधा इंडेक्स से कनेक्ट कर रहे हैं ताकि Render Timeout न हो
         index = pc.Index(index_name)
         use_vector_db = True
         print("Pinecone Vector DB Ready! 🧠")
     except Exception as e:
         print(f"Pinecone Setup Error: {e}")
 
+# --- Helper: Generate Embeddings via Hugging Face ---
 def get_embedding(text):
     if not HF_TOKEN: return None
     try:
@@ -58,6 +53,7 @@ def get_embedding(text):
     except: return None
     return None
 
+# --- Helper: Save Long-Term Memory (Background Task) ---
 def save_memory_background(user_text, ai_text, timestamp):
     if mongo_status:
         try:
@@ -74,6 +70,7 @@ def save_memory_background(user_text, ai_text, timestamp):
                 index.upsert(vectors=[{"id": memory_id, "values": vector, "metadata": {"text": memory_text}}])
         except: pass
 
+# --- Helper: Retrieve Past Memories ---
 def retrieve_past_memories(user_input):
     if not use_vector_db or not index: return ""
     try:
@@ -86,6 +83,7 @@ def retrieve_past_memories(user_input):
     except: pass
     return ""
 
+# --- 🌍 LIVE INTERNET DATA ENGINE ---
 def get_live_data(user_input):
     live_context = ""
     user_input_lower = user_input.lower()
@@ -178,10 +176,10 @@ def get_ai_response(user_input):
                 data=json.dumps({
                     "model": "llama-3.3-70b-versatile",
                     "messages": messages,
-                    "temperature": 0.50,  # Lowered back to 0.50 to enforce strict grammar rules
+                    "temperature": 0.50,  
                     "top_p": 0.9,
                     "frequency_penalty": 0.6, 
-                    "presence_penalty": 0.5, # Kept slightly elevated for initiative, but safe for grammar
+                    "presence_penalty": 0.5, 
                     "max_tokens": 80 
                 }),
                 timeout=20 
@@ -235,4 +233,3 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
-    
