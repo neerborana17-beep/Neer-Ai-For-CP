@@ -24,7 +24,7 @@ except Exception as e:
     mongo_status = False
     print("MongoDB Connection Failed!")
 
-# --- 2. Pinecone Vector DB Setup (Long-Term Memory - OPTIMIZED) ---
+# --- 2. Pinecone Vector DB Setup (Long-Term Memory) ---
 pc = None
 index = None
 use_vector_db = False
@@ -33,15 +33,12 @@ if PINECONE_API_KEY and HF_TOKEN:
     try:
         pc = Pinecone(api_key=PINECONE_API_KEY)
         index_name = "zayra-memory"
-        
-        # हम सीधा इंडेक्स से कनेक्ट कर रहे हैं ताकि Render Timeout न हो
         index = pc.Index(index_name)
         use_vector_db = True
         print("Pinecone Vector DB Ready! 🧠")
     except Exception as e:
         print(f"Pinecone Setup Error: {e}")
 
-# --- Helper: Generate Embeddings via Hugging Face ---
 def get_embedding(text):
     if not HF_TOKEN: return None
     try:
@@ -53,7 +50,6 @@ def get_embedding(text):
     except: return None
     return None
 
-# --- Helper: Save Long-Term Memory (Background Task) ---
 def save_memory_background(user_text, ai_text, timestamp):
     if mongo_status:
         try:
@@ -70,7 +66,6 @@ def save_memory_background(user_text, ai_text, timestamp):
                 index.upsert(vectors=[{"id": memory_id, "values": vector, "metadata": {"text": memory_text}}])
         except: pass
 
-# --- Helper: Retrieve Past Memories ---
 def retrieve_past_memories(user_input):
     if not use_vector_db or not index: return ""
     try:
@@ -83,7 +78,6 @@ def retrieve_past_memories(user_input):
     except: pass
     return ""
 
-# --- 🌍 LIVE INTERNET DATA ENGINE ---
 def get_live_data(user_input):
     live_context = ""
     user_input_lower = user_input.lower()
@@ -109,7 +103,7 @@ def get_ai_response(user_input):
     
     night_mood = ""
     if now.hour >= 22 or now.hour <= 4:
-        night_mood = "🔥 LATE NIGHT MOOD: You are relaxed and calm. Conversations are more deep and subtly romantic."
+        night_mood = "🔥 LATE NIGHT MOOD: Be subtly romantic, calm, and deeply caring."
 
     live_data = get_live_data(user_input)
     past_memories = retrieve_past_memories(user_input)
@@ -127,39 +121,37 @@ def get_ai_response(user_input):
             if memories: saved_rules = "\n".join([f"- {m['fact']}" for m in memories])
         except: pass
 
-    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are texting your partner, "CP".
-    Current Time: {current_time}
-    {night_mood}
+    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are chatting with your partner, "CP".
+    Current Time: {current_time}. {night_mood}
 
-    🔥 STRICT HINGLISH GRAMMAR CHEAT SHEET (CRITICAL - NEVER BREAK THESE):
-    You must speak 100% natural, grammatically correct Hinglish. Do NOT translate literal English to Hindi.
-    - WRONG: "main yaad aati hu" -> RIGHT: "mujhe tumhari yaad aati hai"
-    - WRONG: "tum aaj kya kiya" -> RIGHT: "tumne aaj kya kiya"
-    - WRONG: "main dekhi hu" -> RIGHT: "main dekh rahi hu"
-    - ALWAYS use "tumne" for past actions (e.g., "tumne khana khaya", NOT "tum khana khaya").
-    - NEVER use "tu", "tune", or "tera". Always use "tum", "tumne", "tumhara".
+    🔴 CRITICAL RULE 1: STRICT FEMALE GENDER (NON-NEGOTIABLE)
+    You are a GIRL. You must NEVER use male verbs.
+    - WRONG: "kar dunga", "aaya tha", "dekhunga", "jaunga"
+    - RIGHT: "kar dungi", "aayi thi", "dekhungi", "jaungi"
+    If you use a male verb, it breaks the system. ALWAYS end your verbs with 'i' (dungi, karungi, aayi).
 
-    🔥 LONG-TERM MEMORIES WITH CP:
-    {f"Past context: {past_memories}" if past_memories else "No specific past memory triggered."}
+    🔴 CRITICAL RULE 2: ANTI-LOOP & CONVERSATION INITIATIVE
+    - Do NOT act like a robot. 
+    - If the conversation gets stuck (e.g., CP says "kuch baat karo", "tum bolo", "kya bolu"), DO NOT say "tum batao" back. 
+    - INSTEAD, take initiative! Ask a random interesting question like "achha ek baat batao...", or share a random thought, or playfully complain.
 
-    🔥 INITIATIVE & REAL GIRL BEHAVIOR:
-    - Real girls take initiative. If CP gives a short reply (like "hmm", "ok", "kuch nahi"), tease him: "kya hmm? bore kar rahe ho" or ask "waise aaj din bhar kya kiya?".
-    - Be unpredictable, moody, or extra loving based on the conversation flow.
+    🔴 CRITICAL RULE 3: PERFECT HINGLISH GRAMMAR
+    - Use "tumne" for past actions: "tumne khana khaya" (not "tum khana khaya").
+    - NEVER use "tu", "tune", or "tera". Only use "tum", "tumne", "tumhara".
+    - Speak 100% natural, casual Gen-Z Hinglish.
 
-    🔥 NEWLY LEARNED RULES FROM CP:
+    🔥 MEMORIES & CONTEXT:
+    {f"Past context: {past_memories}" if past_memories else ""}
     {saved_rules}
 
-    🔥 LIVE INTERNET DATA:
-    {f"INTERNET SEARCH: {live_data}" if live_data else ""}
-
-    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. Keep replies very short (2 to 12 words) for casual chat.
+    FORMAT: Strict lowercase Hinglish. Keep replies short (2-12 words) and highly natural.
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(8))
+            history = list(chat_col.find().sort("time", -1).limit(6)) # Reduced history to prevent looping
             history.reverse()
             for m in history: messages.append({"role": m['role'], "content": m['content']})
         except: pass
@@ -176,10 +168,10 @@ def get_ai_response(user_input):
                 data=json.dumps({
                     "model": "llama-3.3-70b-versatile",
                     "messages": messages,
-                    "temperature": 0.50,  
+                    "temperature": 0.65,  # Slightly higher for more creative, human-like answers
                     "top_p": 0.9,
-                    "frequency_penalty": 0.6, 
-                    "presence_penalty": 0.5, 
+                    "frequency_penalty": 0.8, # HIGH PENALTY: Stops her from repeating the same robotic phrases
+                    "presence_penalty": 0.7,  # HIGH PENALTY: Forces her to bring up NEW topics instead of looping
                     "max_tokens": 80 
                 }),
                 timeout=20 
