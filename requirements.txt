@@ -6,3 +6,4 @@ requests
 pinecone
 gunicorn
 apscheduler
+duckduckgo-search
