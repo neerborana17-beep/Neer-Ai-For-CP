@@ -3,5 +3,5 @@ pymongo
 pytz
 certifi
 requests
-pinecone-client
+pinecone
 gunicorn
