@@ -4,3 +4,4 @@ pytz
 certifi
 requests
 pinecone-client
+gunicorn
