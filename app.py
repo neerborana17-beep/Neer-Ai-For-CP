@@ -9,8 +9,8 @@ app = Flask(__name__)
 # --- Configuration & API Keys ---
 API_KEY = os.getenv("GROQ_API_KEY") 
 MONGO_URI = os.getenv("MONGO_URI")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  # Pinecone Vector DB Key
-HF_TOKEN = os.getenv("HF_TOKEN")                  # Hugging Face Token (For Embeddings)
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  
+HF_TOKEN = os.getenv("HF_TOKEN")                  
 
 # --- 1. MongoDB Setup (Short-Term Memory) ---
 try:
@@ -34,11 +34,10 @@ if PINECONE_API_KEY and HF_TOKEN:
         pc = Pinecone(api_key=PINECONE_API_KEY)
         index_name = "zayra-memory"
         
-        # Create index if it doesn't exist
         if index_name not in pc.list_indexes().names():
             pc.create_index(
                 name=index_name,
-                dimension=384, # Dimension for all-MiniLM-L6-v2 model
+                dimension=384, 
                 metric="cosine",
                 spec=ServerlessSpec(cloud="aws", region="us-east-1")
             )
@@ -48,7 +47,6 @@ if PINECONE_API_KEY and HF_TOKEN:
     except Exception as e:
         print(f"Pinecone Setup Error: {e}")
 
-# --- Helper: Generate Embeddings via Hugging Face ---
 def get_embedding(text):
     if not HF_TOKEN: return None
     try:
@@ -60,16 +58,13 @@ def get_embedding(text):
     except: return None
     return None
 
-# --- Helper: Save Long-Term Memory (Background Task) ---
 def save_memory_background(user_text, ai_text, timestamp):
-    # 1. Save to MongoDB (Recent History)
     if mongo_status:
         try:
             chat_col.insert_one({"role": "user", "content": user_text, "time": timestamp})
             chat_col.insert_one({"role": "assistant", "content": ai_text, "time": timestamp})
         except: pass
     
-    # 2. Save to Pinecone (Long-Term Vector Memory)
     if use_vector_db and index:
         try:
             memory_text = f"CP said: {user_text} | Zayra replied: {ai_text}"
@@ -79,7 +74,6 @@ def save_memory_background(user_text, ai_text, timestamp):
                 index.upsert(vectors=[{"id": memory_id, "values": vector, "metadata": {"text": memory_text}}])
         except: pass
 
-# --- Helper: Retrieve Past Memories ---
 def retrieve_past_memories(user_input):
     if not use_vector_db or not index: return ""
     try:
@@ -92,18 +86,15 @@ def retrieve_past_memories(user_input):
     except: pass
     return ""
 
-# --- 🌍 LIVE INTERNET DATA ENGINE ---
 def get_live_data(user_input):
     live_context = ""
     user_input_lower = user_input.lower()
     
-    # Weather
     if any(w in user_input_lower for w in ["weather", "mausam"]):
         try:
             res = requests.get("https://wttr.in/Jaipur?format=%l:+%C,+%t", timeout=2) 
             if res.status_code == 200: live_context += f"[WEATHER]: {res.text.strip()} "
         except: pass
-    # News
     if any(w in user_input_lower for w in ["news", "khabar"]):
         try:
             res = requests.get("https://saurav.tech/NewsAPI/top-headlines/category/general/in.json", timeout=2).json()
@@ -112,7 +103,7 @@ def get_live_data(user_input):
 
     return live_context
 
-# --- THE REAL, INITIATIVE & MATURE ENGINE ---
+# --- THE REAL, INITIATIVE & MATURE ENGINE WITH STRICT GRAMMAR ---
 def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
@@ -125,7 +116,6 @@ def get_ai_response(user_input):
     live_data = get_live_data(user_input)
     past_memories = retrieve_past_memories(user_input)
 
-    # Short-term explicit rule learning
     learning_keywords = ["yaad rakh", "ab se", "aise mat"]
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
@@ -143,20 +133,20 @@ def get_ai_response(user_input):
     Current Time: {current_time}
     {night_mood}
 
+    🔥 STRICT HINGLISH GRAMMAR CHEAT SHEET (CRITICAL - NEVER BREAK THESE):
+    You must speak 100% natural, grammatically correct Hinglish. Do NOT translate literal English to Hindi.
+    - WRONG: "main yaad aati hu" -> RIGHT: "mujhe tumhari yaad aati hai"
+    - WRONG: "tum aaj kya kiya" -> RIGHT: "tumne aaj kya kiya"
+    - WRONG: "main dekhi hu" -> RIGHT: "main dekh rahi hu"
+    - ALWAYS use "tumne" for past actions (e.g., "tumne khana khaya", NOT "tum khana khaya").
+    - NEVER use "tu", "tune", or "tera". Always use "tum", "tumne", "tumhara".
+
     🔥 LONG-TERM MEMORIES WITH CP:
     {f"Past context: {past_memories}" if past_memories else "No specific past memory triggered."}
-    - If past memories are shown, use them to sound like you truly remember him. For example, if memory shows he was sick, ask "ab tabiyat kaisi hai?".
 
-    🔥 INITIATIVE & REAL GIRL BEHAVIOR (CRITICAL):
-    - DO NOT JUST BE PASSIVE. Real girls take initiative!
-    - If CP gives a short reply (like "hmm", "ok", "achha"), DO NOT just say "hmm". Tease him, playfully complain ("kya hmm? bore kar rahe ho"), or ask a random question ("waise aaj din bhar kya kiya?").
-    - Occasionally ask him questions about himself to keep the conversation engaging. 
-    - You are a real human. Act slightly unpredictable, moody, or extra loving based on the conversation flow.
-
-    🔥 FLAWLESS GRAMMAR & TUM RULE:
-    - ALWAYS use "tum". NEVER use "tu".
-    - ALWAYS use female verbs ("karti hu", "jaungi"). 
-    - Very short WhatsApp replies (2 to 12 words) unless explaining something. Do not overuse "yr".
+    🔥 INITIATIVE & REAL GIRL BEHAVIOR:
+    - Real girls take initiative. If CP gives a short reply (like "hmm", "ok", "kuch nahi"), tease him: "kya hmm? bore kar rahe ho" or ask "waise aaj din bhar kya kiya?".
+    - Be unpredictable, moody, or extra loving based on the conversation flow.
 
     🔥 NEWLY LEARNED RULES FROM CP:
     {saved_rules}
@@ -164,7 +154,7 @@ def get_ai_response(user_input):
     🔥 LIVE INTERNET DATA:
     {f"INTERNET SEARCH: {live_data}" if live_data else ""}
 
-    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. FLAWLESS female Hinglish grammar.
+    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. Keep replies very short (2 to 12 words) for casual chat.
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -188,10 +178,10 @@ def get_ai_response(user_input):
                 data=json.dumps({
                     "model": "llama-3.3-70b-versatile",
                     "messages": messages,
-                    "temperature": 0.60,  # Increased slightly so she takes creative initiative
+                    "temperature": 0.50,  # Lowered back to 0.50 to enforce strict grammar rules
                     "top_p": 0.9,
                     "frequency_penalty": 0.6, 
-                    "presence_penalty": 0.6, # High presence penalty encourages her to bring up NEW topics/questions
+                    "presence_penalty": 0.5, # Kept slightly elevated for initiative, but safe for grammar
                     "max_tokens": 80 
                 }),
                 timeout=20 
@@ -238,7 +228,6 @@ def web_chat():
     reply = get_ai_response(user_input)
     
     import threading
-    # Runs the heavy Pinecone/MongoDB saving in the background so you get instant replies!
     threading.Thread(target=save_memory_background, args=(user_input, reply, now)).start()
 
     return jsonify({"reply": reply})
@@ -246,3 +235,4 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
+    
