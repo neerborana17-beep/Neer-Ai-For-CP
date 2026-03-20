@@ -1,7 +1,7 @@
 """
-Zayra AI Backend - Optimization V4 (Emotion Engine + Few-Shot Grammar)
+Zayra AI Backend - Optimization V5 (Port Timeout Fix)
 Stability: Errorless (All Features Integrated)
-Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search
+Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
 
 import os, requests, json, pytz, certifi, time
@@ -20,18 +20,23 @@ MONGO_URI = os.getenv("MONGO_URI")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  
 HF_TOKEN = os.getenv("HF_TOKEN")                  
 
-# --- 1. MongoDB Setup ---
+# --- 1. MongoDB Setup (Optimized for Fast Boot) ---
 try:
-    if not MONGO_URI: raise ValueError("MongoDB URI is missing.")
-    client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000, maxPoolSize=10)
-    db = client['neer_db'] 
-    chat_col = db['history']
-    memory_col = db['dynamic_memories']
-    mongo_status = True
-    print("MongoDB Connected! ❤️")
+    if MONGO_URI:
+        # serverSelectionTimeoutMS ko 2000 (2 sec) kiya hai taki Render timeout na ho
+        client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=2000, maxPoolSize=10)
+        db = client['neer_db'] 
+        chat_col = db['history']
+        memory_col = db['dynamic_memories']
+        # Quick ping to check connection without blocking
+        client.admin.command('ping')
+        mongo_status = True
+        print("MongoDB Connected! ❤️")
+    else:
+        raise ValueError("MongoDB URI is missing.")
 except Exception as e:
     mongo_status = False
-    print(f"MongoDB Connection Failed! Error: {e}")
+    print(f"MongoDB Connection Failed/Skipped for fast boot: {e}")
 
 # --- 2. Pinecone Vector DB Setup ---
 pc = None
@@ -53,7 +58,7 @@ def get_embedding(text):
     try:
         url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
         headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-        res = requests.post(url, headers=headers, json={"inputs": text}, timeout=5)
+        res = requests.post(url, headers=headers, json={"inputs": text}, timeout=3)
         if res.status_code == 200:
             return res.json()
     except Exception: return None
@@ -143,16 +148,19 @@ def trigger_proactive_message(context_mood):
     except Exception as e:
         print(f"[SHEDULER] ❌ Pro-active exception: {e}")
 
-scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Kolkata'))
-scheduler.add_job(trigger_proactive_message, 'cron', hour=8, minute=30, jitter=1800, args=["You just woke up and want to wish him Good Morning affectionately."])
-scheduler.add_job(trigger_proactive_message, 'cron', hour=22, minute=30, jitter=1800, args=["You are missing him at night and asking if he had dinner."])
-scheduler.start()
+try:
+    scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Kolkata'))
+    scheduler.add_job(trigger_proactive_message, 'cron', hour=8, minute=30, jitter=1800, args=["You just woke up and want to wish him Good Morning affectionately."])
+    scheduler.add_job(trigger_proactive_message, 'cron', hour=22, minute=30, jitter=1800, args=["You are missing him at night and asking if he had dinner."])
+    scheduler.start()
+except Exception as e:
+    print(f"Scheduler failed to start: {e}")
 
 # ==========================================
 # 🧠 THE REAL, INITIATIVE & MATURE ENGINE
 # ==========================================
 def get_ai_response(user_input):
-    if not groq_status: return "Mera dimaag band hai cp 🥺"
+    if not API_KEY: return "Mera dimaag band hai cp 🥺 API key check karo."
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
@@ -295,6 +303,8 @@ def web_chat():
 
     return jsonify({"reply": reply})
 
+# Render par fast aur correct port binding ke liye optimized
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host='0.0.0.0', port=port, debug=False)
+            
