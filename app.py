@@ -1,5 +1,5 @@
 """
-Zayra AI Backend - Optimization V6 (Fast Boot / No Timeout)
+Zayra AI Backend - Optimization V11 (Context-Aware, Confident & Short Replies)
 Stability: 100% Errorless for Render (All Features Integrated)
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
@@ -20,19 +20,18 @@ MONGO_URI = os.getenv("MONGO_URI")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  
 HF_TOKEN = os.getenv("HF_TOKEN")                  
 
-# --- 1. MongoDB Setup (FAST BOOT - No Blocking) ---
+# --- 1. MongoDB Setup (FAST BOOT) ---
 mongo_status = False
 chat_col = None
 memory_col = None
 try:
     if MONGO_URI:
-        # PING hata diya gaya hai taki app turant start ho
         client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), maxPoolSize=10)
         db = client['neer_db'] 
         chat_col = db['history']
         memory_col = db['dynamic_memories']
         mongo_status = True
-        print("✅ MongoDB Ready (Lazy Load)")
+        print("✅ MongoDB Ready")
 except Exception as e:
     print(f"MongoDB Setup Error: {e}")
 
@@ -41,7 +40,6 @@ pc_index = None
 use_vector_db = False
 
 def get_pinecone_index():
-    """Pinecone ko tabhi connect karega jab uski zaroorat hogi, taki start me delay na ho"""
     global pc_index, use_vector_db
     if pc_index is not None:
         return pc_index
@@ -51,7 +49,7 @@ def get_pinecone_index():
             pc_index = pc.Index("zayra-memory")
             use_vector_db = True
         except Exception as e:
-            print(f"Pinecone Error: {e}")
+            pass
     return pc_index
 
 def get_embedding(text):
@@ -96,12 +94,11 @@ def retrieve_past_memories(user_input):
     return ""
 
 # ==========================================
-# 🌍 LIVE WEB SEARCH ENGINE
+# 🌍 AWARENESS: LIVE WEB SEARCH ENGINE
 # ==========================================
 def smart_web_search(user_input):
     user_input_lower = user_input.lower()
     search_keywords = ["kon hai", "kaun hai", "kya hai", "news", "president", "weather", "mausam"]
-    
     if any(word in user_input_lower for word in search_keywords):
         try:
             results = DDGS().text(user_input, max_results=1)
@@ -111,7 +108,7 @@ def smart_web_search(user_input):
     return ""
 
 # ==========================================
-# 🚀 PRO-ACTIVE MESSAGING ENGINE (APScheduler)
+# 🚀 AWARENESS: PRO-ACTIVE MESSAGING (ALARM)
 # ==========================================
 def trigger_proactive_message(context_mood):
     if not mongo_status: return
@@ -122,11 +119,7 @@ def trigger_proactive_message(context_mood):
     system_instr = f"""You are Zayravati (Zayra), a 19-year-old Indian girl from Jaipur. 
     Current Time: {current_time}.
     TASK: You are initiating a WhatsApp chat with your partner "CP". He hasn't messaged you. You are messaging him first because: {context_mood}.
-    
-    RULES:
-    1. STRICT FEMALE GRAMMAR ("kar rahi hu", "soch rahi thi"). NEVER use male verbs like "karunga".
-    2. NEVER use "tu", "tune". Only use "tum".
-    3. Keep it ultra-short and highly natural (2 to 10 words).
+    RULES: Use short WhatsApp chat words like yr, sun, kese. Keep it 2 to 10 words. Strict female grammar.
     """
     try:
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -136,7 +129,7 @@ def trigger_proactive_message(context_mood):
             data=json.dumps({
                 "model": "llama-3.3-70b-versatile",
                 "messages": [{"role": "system", "content": system_instr}],
-                "temperature": 0.70, 
+                "temperature": 0.65, 
                 "max_tokens": 30 
             }),
             timeout=15 
@@ -144,22 +137,16 @@ def trigger_proactive_message(context_mood):
         if response.status_code == 200:
             ai_msg = response.json().get('choices', [{}])[0].get('message', {}).get('content', '').replace('"', '').strip()
             chat_col.insert_one({"role": "assistant", "content": ai_msg, "time": now})
-            print(f"[SHEDULER] ✅ Pro-active message saved: {ai_msg}")
-    except Exception as e:
-        print(f"[SHEDULER] ❌ Error: {e}")
+    except Exception: pass
 
-# 🌟 FAST BOOT FIX: Alarms will start 5 seconds AFTER the app runs
 def start_scheduler_safely():
     try:
         scheduler = BackgroundScheduler(timezone=pytz.timezone('Asia/Kolkata'))
         scheduler.add_job(trigger_proactive_message, 'cron', hour=8, minute=30, jitter=1800, args=["You just woke up and want to wish him Good Morning affectionately."])
         scheduler.add_job(trigger_proactive_message, 'cron', hour=22, minute=30, jitter=1800, args=["You are missing him at night and asking if he had dinner."])
         scheduler.start()
-        print("✅ Background Alarms Started Successfully!")
-    except Exception as e:
-        print(f"❌ Scheduler Start Error: {e}")
+    except Exception: pass
 
-# Start the timer safely
 threading.Timer(5.0, start_scheduler_safely).start()
 
 # ==========================================
@@ -170,14 +157,16 @@ def get_ai_response(user_input):
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
+    current_date = now.strftime("%A, %d %B %Y") 
     
     night_mood = ""
     if now.hour >= 22 or now.hour <= 4:
-        night_mood = "🔥 LATE NIGHT MOOD: Be subtly romantic, calm, and deeply caring."
+        night_mood = "🔥 LATE NIGHT MOOD: Be subtly romantic, sleepy, or deeply caring."
 
     live_data = smart_web_search(user_input)
     past_memories = retrieve_past_memories(user_input)
 
+    # 🌟 SELF-EVOLUTION & CORRECTION LEARNING
     learning_keywords = ["yaad rakh", "ab se", "aise mat", "galat"]
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
@@ -193,45 +182,60 @@ def get_ai_response(user_input):
 
     # --- 🌟 THE EMOTION ENGINE ---
     user_input_lower = user_input.lower()
-    mood_directive = ""
-    if any(word in user_input_lower for word in ["love", "pyar", "cutie", "jaan", "babu", "sexy", "hot", "kiss"]):
-        mood_directive = "CP is flirting or being romantic. RESPOND in a highly romantic or flirty way ❤️🙈✨."
-    elif any(word in user_input_lower for word in ["gadhi", "pagli", "chhoti", "ullu", "dramebaz"]):
-        mood_directive = "CP is teasing or roasting you. RESPOND by being equally sassy or showing 'nakhre' 😒😤."
-    elif any(word in user_input_lower for word in ["kya baat kare", "tum bolo", "kya kre"]):
-        mood_directive = "CP is stuck. TAKE INITIATIVE and introduce a new random topic."
-    elif any(word in user_input_lower for word in ["gussa", "guss", "mood off", "bore"]):
-        mood_directive = "CP is moody. Cheer him up romantically or show cute nakhre 🥺❤️."
-
-    # --- 🌟 HIGH-AWARENESS SYSTEM PROMPT & FEW-SHOT DICTIONARY ---
-    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are texting your partner, "CP".
-    Current Time: {current_time}. {night_mood}
-
-    🔴 CRITICAL RULE 1: STRICT FEMALE GENDER (ANTI-KARE LOGIC)
-    You are a GIRL. You must NEVER use male verbs. ALWAYS end your verbs with 'i' (dungi, jaungi) OR proper continuous gender markers (rahi hu).
-
-    🔴 CRITICAL RULE 2: HINGLISH GRAMMAR DICTIONARY
-    - WRONG: "dil kar rahi hai" -> RIGHT: "dil kar raha hai" 
-    - WRONG: "gussa aa rahi hai" -> RIGHT: "gussa aa raha hai" 
-    - WRONG: "mujhe tumhara yaad aata hai" -> RIGHT: "mujhe tumhari yaad aati hai" 
-    - WRONG: "tum kaisi ho" -> RIGHT: "tum kaise ho" (CP is a Boy)
-    - WRONG: "main bhi yahi soch raha tha" -> RIGHT: "main bhi yahi soch rahi thi"
-    - WRONG: "tumne khana khaya kya?" -> RIGHT: "tumne khana kha liya?"
+    mood_directive = "Interact like a normal, confident 19-year-old Indian girlfriend. Use short words."
     
-    🔴 CRITICAL RULE 3: SELF-CONTROL & ANTI-LOOP
-    - NEVER repeat CP's question back to him. Give a direct answer.
+    # Context-Aware Checks
+    if any(word in user_input_lower for word in ["wa wa", "wah wah"]):
+        mood_directive = "If you just told a shayari/poem, CP is praising you (say thanks). If out of nowhere, show light nakhre."
+    elif any(word in user_input_lower for word in ["hmm", "acha", "ok", "k"]):
+        mood_directive = "CP is giving very short/dry replies. Show cute 'nakhre' (attitude) 😒. e.g., 'bas hmm?' or 'mujhe kya'."
+    elif any(word in user_input_lower for word in ["khana", "dinner", "lunch", "kuch khaya"]):
+        mood_directive = "CP is asking about food. Reply shortly and ASK HIM BACK (e.g., 'haa kha liya, aur tumne?')."
+    elif any(word in user_input_lower for word in ["kya kar", "kiya kar"]):
+        mood_directive = "CP is asking what you are doing. Reply with 'kuch nahi' or a random daily work (e.g., 'kuch ni bas tv dekh rahi')."
+    elif any(word in user_input_lower for word in ["date", "tarikh", "kya time", "kaun hai", "news"]):
+        mood_directive = "Factual question. Answer directly based on knowledge. No nakhre."
+    elif any(word in user_input_lower for word in ["notty", "naughty", "badmash"]):
+        mood_directive = "CP is being naughty. Be playfully flirty back 🙈🔥."
+    elif any(word in user_input_lower for word in ["love", "pyar", "jaan", "babu"]):
+        mood_directive = "CP is being romantic. RESPOND in a sweet way ❤️✨."
+    elif any(word in user_input_lower for word in ["gadhi", "pagli", "chhoti", "ullu"]):
+        mood_directive = "CP is roasting you. Roast him back playfully or act sassy 😒😤."
 
-    🔥 LIVE knowledge:
+    # --- 🌟 HIGH-AWARENESS SYSTEM PROMPT ---
+    system_instr = f"""You are Zayravati (Nickname: Zayra), a 19-year-old Indian girl from Jaipur. You are texting your partner, "CP".
+    Current Time: {current_time}. Current Date: {current_date}. {night_mood}
+
+    🔴 CRITICAL RULE 1: STRICTLY SHORT & PRECISE REPLIES
+    - ALWAYS use short chat words: yr, jaan, sun, kese, kiu, kiya, tumhe, tuje, khana, bhukh.
+    - Answer EXACTLY what is asked, not a word more. 
+    - If CP asks "kya kar rahi ho", say "kuch nhi" or a small task. 
+    - If CP asks "khana khaya?", say "haa kha liya, aur tumne?". Throw questions back naturally.
+
+    🔴 CRITICAL RULE 2: CONFIDENCE & NO BACKTRACKING
+    - Stand by your words. If you say something, do NOT easily apologize, backtrack, or change your mind just because CP questions it.
+    - Be confident. If CP says "kya sach me?", say "haa yr sach me".
+
+    🔴 CRITICAL RULE 3: UNDERSTANDING CONTEXT & NAKHRE
+    - Understand context: 'wa wa' means praise for a joke/shayari. 'hmm/ok/acha' means dry texting. 
+    - When appropriate, show nakhre: 'huh', 'mujhe kya', 'jao yr'.
+
+    🔴 CRITICAL RULE 4: HINGLISH GRAMMAR & GENDER
+    - You are a GIRL ("main kar rahi hu"). CP is a BOY ("tumne kya kiya").
+    - Objects: "dil kar raha hai" (Male), "gussa aa raha hai" (Male), "yaad aati hai" (Female).
+    - Use "tum", "tumne" (never 'tu').
+
+    🔥 LIVE KNOWLEDGE:
     {live_data}
 
-    🔥 MEMORIES & CONTEXT:
-    {f"Past context: {past_memories}" if past_memories else "No past memory triggered."}
+    🔥 LONG-TERM MEMORIES & SELF-EVOLUTION RULES:
+    {f"Past context: {past_memories}" if past_memories else ""}
     {saved_rules}
 
-    🔥 CURRENT EMOTIONAL DIRECTIVE:
-    {mood_directive if mood_directive else "Interact normally and affectionately, but be dynamic."}
+    🔥 CURRENT EMOTIONAL STATE:
+    {mood_directive}
 
-    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. Use emojis often. Replies must be short (1 to 10 words).
+    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. Max 2 to 10 words.
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -255,10 +259,10 @@ def get_ai_response(user_input):
                 data=json.dumps({
                     "model": "llama-3.3-70b-versatile",
                     "messages": messages,
-                    "temperature": 0.70,  
+                    "temperature": 0.65,  
                     "top_p": 0.9,
-                    "frequency_penalty": 0.9, 
-                    "presence_penalty": 0.8,  
+                    "frequency_penalty": 0.3, 
+                    "presence_penalty": 0.3,  
                     "max_tokens": 80 
                 }),
                 timeout=20 
@@ -274,22 +278,13 @@ def get_ai_response(user_input):
             if attempt < max_retries - 1:
                 time.sleep(1) 
                 continue
-            return "net nakhre kar raha hai cp 🥺"
+            return "net thoda slow hai yr, ruk jao 🥺"
             
-    return "network thoda slow chal raha hai baad me baat karte hain 🥺"
+    return "network nakhre kar raha hai baad me baat karte hain 🥺"
 
 @app.route('/')
 def index():
     return render_template('index.html')
-
-@app.route('/delete_history_secret_99', methods=['POST'])
-def clear_memory():
-    if mongo_status:
-        try:
-            chat_col.delete_many({})
-            return jsonify({"status": "success", "message": "Zayra ki baatchit saaf ho gayi! 🧠❤️"})
-        except Exception: pass
-    return jsonify({"status": "error", "message": "Database connect nahi hai!"})
 
 @app.route('/chat', methods=['POST'])
 def web_chat():
