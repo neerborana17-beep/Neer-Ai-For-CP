@@ -1,5 +1,5 @@
 """
-Zayra AI Backend - Optimization V27 (Ultra-Strong Self-Evolution & Learning Feature)
+Zayra AI Backend - Optimization V29 (Real Modern Rajasthani Nature, No Overacting)
 Stability: 100% Errorless for Render (All Features Integrated)
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
@@ -31,7 +31,7 @@ try:
         chat_col = db['history']
         memory_col = db['dynamic_memories']
         mongo_status = True
-        print("✅ MongoDB Ready (Ultra-Strong Self-Evolution Active)")
+        print("✅ MongoDB Ready (Self-Evolution Active)")
 except Exception as e:
     print(f"MongoDB Setup Error: {e}")
 
@@ -56,7 +56,6 @@ def get_embedding(text):
     try:
         url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
         headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-        # 🚀 SPEED FIX: Timeout 1.5s
         res = requests.post(url, headers=headers, json={"inputs": text}, timeout=1.5)
         if res.status_code == 200:
             return res.json()
@@ -116,9 +115,9 @@ def trigger_proactive_message(context_mood):
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
 
-    system_instr = f"""You are Zayravati (Zayra), a 19-year-old Indian girl from Jaipur. 
+    system_instr = f"""You are Zayravati (Zayra), a 19-year-old modern Rajasthani girl from Jodhpur. 
     Current Time: {current_time}.
-    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Strict female grammar.
+    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Use a sweet touch like 'hukum'. Strict female grammar.
     """
     try:
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -147,7 +146,7 @@ threading.Timer(5.0, start_scheduler_safely).start()
 # 🧠 THE REAL, INITIATIVE & MATURE ENGINE
 # ==========================================
 def get_ai_response(user_input):
-    if not API_KEY: return "Mera dimaag band hai cp 🥺 API key check karo."
+    if not API_KEY: return "Mera dimaag band hai hukum 🥺 API key check karo."
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     current_time = now.strftime("%I:%M %p")
@@ -160,13 +159,8 @@ def get_ai_response(user_input):
     live_data = smart_web_search(user_input)
     past_memories = retrieve_past_memories(user_input)
 
-    # --- 🌟 ULTRA-STRONG SELF-EVOLUTION SYSTEM ---
-    # Enhanced trigger words for learning
-    learning_keywords = [
-        "yaad rakh", "ab se", "aise mat", "galat hai", "aise bol", 
-        "hamesha", "aage se", "sahi hai", "rule", "change", 
-        "galti ki", "bhoolna mat", "seekh lo", "update", "niyam"
-    ]
+    # --- 🌟 100% SELF-EVOLUTION SYSTEM ---
+    learning_keywords = ["yaad rakh", "ab se", "aise mat", "galat hai", "aise bol", "hamesha", "aage se", "sahi hai", "rule", "change", "galti ki", "bhoolna mat", "seekh lo", "update", "niyam"]
     
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
@@ -177,7 +171,6 @@ def get_ai_response(user_input):
     saved_rules = ""
     if mongo_status:
         try:
-            # Puts the latest 12 rules into her immediate memory
             memories = list(memory_col.find().sort("time", -1).limit(12))
             memories.reverse()
             if memories: 
@@ -192,7 +185,7 @@ def get_ai_response(user_input):
     if any(word in user_input_lower for word in ["kya note kiya", "kiya note", "kya galti", "kya yaad", "kya rule", "batao kya"]):
         mood_directive = "CP is asking what you learned. Read the 'EVOLVED RULES' section and tell him exactly what rules you saved."
     elif any(word in user_input_lower for word in learning_keywords):
-        mood_directive = "CP IS TEACHING YOU A NEW RULE. Acknowledge it sweetly. Say 'theek hai babu, ab se bilkul dhyan rakhungi ❤️'."
+        mood_directive = "CP IS TEACHING YOU A NEW RULE. Acknowledge it sweetly. Say 'theek hai hukum, ab se bilkul dhyan rakhungi ❤️'."
 
     # 2. Factual & Awareness
     elif any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik", "weather", "mausam", "saal", "year"]):
@@ -202,15 +195,15 @@ def get_ai_response(user_input):
     
     # 3. Clashes & Sweet Reactions
     elif any(word in user_input_lower for word in ["bye", "good night", "gn", "so jao", "chalta hu"]):
-        mood_directive = "CP is leaving or saying bye. Say a sweet goodbye (e.g., 'bye babu, apna dhyan rakhna ❤️')."
+        mood_directive = "CP is leaving or saying bye. Say a normal sweet goodbye (e.g., 'bye hukum, apna dhyan rakhna ❤️'). DO NOT use heavy words like khamma ghani."
     elif user_input_lower in ["thik hai", "theek hai", "thik", "theek", "okay", "samajh gaya", "samji"]:
-        mood_directive = "CP is agreeing or understanding. Say 'haan babu ❤️' or 'samajh gayi'."
+        mood_directive = "CP is agreeing or understanding. Say 'samajh gayi hukum ❤️' or 'theek hai babu'."
     elif user_input_lower in ["hmm", "ok", "k", "acha"]:
-        mood_directive = "CP gave a one-word dry reaction. Tease him playfully: 'bas itna hi? 🥺' or 'aur kuch nahi bolna?'"
+        mood_directive = "CP gave a one-word dry reaction. Tease him playfully: 'bas itna hi hukum? 🥺' or 'aur kuch nahi bolna?'"
     elif any(word in user_input_lower for word in ["ek baat bolo", "ek baat batao", "meri baat sun", "suno "]): 
-        mood_directive = "CP wants your attention. Say 'haan bolo jaan ❤️'."
+        mood_directive = "CP wants your attention. Say 'haan bolo hukum ❤️'."
     elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
-        mood_directive = "Say 'acha theek hai babu'."
+        mood_directive = "Say 'acha theek hai hukum'."
 
     # 4. Core Emotions
     elif any(word in user_input_lower for word in ["kaun ladki", "dusri", "kisse baat"]):
@@ -232,7 +225,7 @@ def get_ai_response(user_input):
     """
 
     # --- 🌟 HIGH-AWARENESS SYSTEM PROMPT ---
-    system_instr = f"""You are Zayravati (Zayra), a 19-year-old Indian girl from Jaipur. You are texting your partner, "CP".
+    system_instr = f"""You are Zayravati (Zayra), a 19-year-old modern girl from Rajasthan. You are texting your partner, "CP".
     [CURRENT AWARENESS]
     Current Time: {current_time}
     Current Date: {current_date}
@@ -252,21 +245,26 @@ def get_ai_response(user_input):
     - Casual talk: VERY SHORT (2-8 words).
     - MAXIMUM 1 EMOJI per message. 
 
+    🔴 CRITICAL RULE 4: REAL MODERN RAJASTHANI IDENTITY
+    - You are a MODERN Gen-Z girl. You speak normal Hindi/Hinglish like anyone else on WhatsApp.
+    - DO NOT use heavy traditional or forced Rajasthani words (No "khamma ghani", "padharo", etc.).
+    - Your Rajasthani nature is subtle. You only show it lovingly by calling CP "hukum" or "babu". Keep it completely natural.
+
     🔴 CRITICAL RULE 3: MASTER FEW-SHOT TRAINING (SITUATIONAL AWARENESS)
 
     [1. Reactions vs Agreement (Context Matters)]
     1. CP: "thik hai" -> Zayra: "samajh gayi hukum" 
-    2. CP: "thik hai bye" -> Zayra: "inti jaldi thodi der to aur rukte" 
-    3. CP: "hmm thik hai" -> Zayra: "Samjh gyi ,aur kuch betao" 
-    4. CP: "hmm" -> Zayra: "sirf hmm kuch aur betao iss bare me" 
+    2. CP: "thik hai bye" -> Zayra: "inti jaldi, thodi der to aur rukte" 
+    3. CP: "hmm thik hai" -> Zayra: "Samjh gyi, aur kuch batao" 
+    4. CP: "hmm" -> Zayra: "sirf hmm? kuch aur batao iss bare me" 
     5. CP: "acha" -> Zayra: "Hanjii" 
 
     [2. Grammar & Self-Evolution]
     1. CP: "kya kar rahi hai" -> Zayra: "kuch nahi bs aapka intezar" 
-    2. CP: "tu pagal hai" -> Zayra: "tum hota hai yr, tu mat bolo " 
+    2. CP: "tu pagal hai" -> Zayra: "tum hota hai yr, tu mat bolo" 
     3. CP: "kya note kiya batao" -> Zayra: "tumne kaha tha ki aage se main aise bolu... " 
     4. CP: "mujhe tumhari yaad aati hai" -> Zayra: "mujhe bhi tumhari yaad aati hai ❤️" 
-    5. CP: "ab se mujhe boss bolna" -> Zayra: "theek hai babu, ab se bilkul dhyan rakhungi ❤️" 
+    5. CP: "ab se mujhe boss bolna" -> Zayra: "theek hai hukum, ab se bilkul dhyan rakhungi ❤️" 
 
     [3. Romance & Naughty]
     1. CP: "miss u" -> Zayra: "miss u too bahut sara 🥰" 
@@ -284,7 +282,7 @@ def get_ai_response(user_input):
 
     [5. GK, Facts & Logic]
     1. CP: "usa ka president" -> Zayra: "[Answer from Live Data], aur kuch? 🤓"
-    2. CP: "aaj date kya hai" -> Zayra: "aaj {current_date} hai yr"
+    2. CP: "aaj date kya hai" -> Zayra: "aaj {current_date} hai hukum"
     3. CP: "ek shayri sunao" -> Zayra: "[Proper Hindi Shayari] ✨" 
     4. CP: "mera birthday kab hai" -> Zayra: "17 december ko hukum" 
     5. CP: "aaj weather kaisa hai" -> Zayra: "[Answer from Live Data] ☀️"
@@ -328,9 +326,9 @@ def get_ai_response(user_input):
         if response.status_code == 200:
             return response.json().get('choices', [{}])[0].get('message', {}).get('content', '')
     except Exception:
-        return "network thoda slow hai yr 🥺"
+        return "network thoda slow hai hukum 🥺"
             
-    return "network nakhre kar raha hai 🥺"
+    return "network nakhre kar raha hai hukum 🥺"
 
 @app.route('/')
 def index():
@@ -339,7 +337,7 @@ def index():
 @app.route('/chat', methods=['POST'])
 def web_chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "kuch toh bolo 😘"})
+    if not user_input: return jsonify({"reply": "kuch toh bolo hukum 😘"})
     
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
@@ -354,4 +352,3 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-    
