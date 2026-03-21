@@ -1,5 +1,5 @@
 """
-Zayra AI Backend - Optimization V20 (Full Emotions, Fast Reply & Situational Awareness)
+Zayra AI Backend - Optimization V23 (100% Self-Evolution & Auto-Correction)
 Stability: 100% Errorless for Render (All Features Integrated)
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
@@ -23,7 +23,7 @@ HF_TOKEN = os.getenv("HF_TOKEN")
 # --- 1. MongoDB Setup (FAST BOOT) ---
 mongo_status = False
 chat_col = None
-memory_col = None
+memory_col = None # Yeh collection self-evolution ke rules save karega
 try:
     if MONGO_URI:
         client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), maxPoolSize=10)
@@ -31,7 +31,7 @@ try:
         chat_col = db['history']
         memory_col = db['dynamic_memories']
         mongo_status = True
-        print("✅ MongoDB Ready")
+        print("✅ MongoDB Ready (Self-Evolution Active)")
 except Exception as e:
     print(f"MongoDB Setup Error: {e}")
 
@@ -56,7 +56,7 @@ def get_embedding(text):
     try:
         url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
         headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-        res = requests.post(url, headers=headers, json={"inputs": text}, timeout=3)
+        res = requests.post(url, headers=headers, json={"inputs": text}, timeout=1.5)
         if res.status_code == 200:
             return res.json()
     except Exception: return None
@@ -107,7 +107,7 @@ def smart_web_search(user_input):
     return ""
 
 # ==========================================
-# 🚀 AWARENESS: PRO-ACTIVE MESSAGING (ALARM)
+# 🚀 AWARENESS: PRO-ACTIVE MESSAGING
 # ==========================================
 def trigger_proactive_message(context_mood):
     if not mongo_status: return
@@ -117,21 +117,15 @@ def trigger_proactive_message(context_mood):
 
     system_instr = f"""You are Zayravati (Zayra), a 19-year-old Indian girl from Jaipur. 
     Current Time: {current_time}.
-    TASK: You are initiating a WhatsApp chat with your partner "CP".
-    RULES: Keep it 2 to 6 words. Max 1 emoji.
+    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Strict female grammar.
     """
     try:
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
         response = requests.post(
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
-            data=json.dumps({
-                "model": "llama-3.3-70b-versatile",
-                "messages": [{"role": "system", "content": system_instr}],
-                "temperature": 0.60, 
-                "max_tokens": 30 
-            }),
-            timeout=15 
+            data=json.dumps({"model": "llama-3.3-70b-versatile", "messages": [{"role": "system", "content": system_instr}], "temperature": 0.60, "max_tokens": 30}),
+            timeout=10 
         )
         if response.status_code == 200:
             ai_msg = response.json().get('choices', [{}])[0].get('message', {}).get('content', '').replace('"', '').strip()
@@ -160,64 +154,71 @@ def get_ai_response(user_input):
     
     night_mood = ""
     if now.hour >= 22 or now.hour <= 4:
-        night_mood = "🔥 LATE NIGHT MOOD: Be subtly romantic, sleepy, or caring."
+        night_mood = "🔥 LATE NIGHT MOOD: Be subtly romantic."
 
     live_data = smart_web_search(user_input)
     past_memories = retrieve_past_memories(user_input)
 
-    # 🌟 SELF-EVOLUTION
-    learning_keywords = ["yaad rakh", "ab se", "aise mat", "galat"]
+    # --- 🌟 100% SELF-EVOLUTION SYSTEM ---
+    # Agar user inme se koi bhi shabd bolta hai, to wo ek naya Niyam (Rule) ban jayega.
+    learning_keywords = ["yaad rakh", "ab se", "aise mat", "galat hai", "aise bol", "hamesha", "aage se", "sahi hai", "rule", "change"]
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
-            try: memory_col.insert_one({"fact": user_input, "time": now})
+            try: 
+                # Naye niyam ko database me permanent save kar rahe hain
+                memory_col.insert_one({"fact": user_input, "time": now})
             except: pass
 
+    # Database se saare purane aur naye niyam nikalna
     saved_rules = ""
     if mongo_status:
         try:
             memories = list(memory_col.find())
-            if memories: saved_rules = "\n".join([f"- {m['fact']}" for m in memories])
+            if memories: 
+                # In niyam ko bohot strict format me LLM ko denge
+                saved_rules = "\n".join([f"-> NEW RULE FROM CP: {m['fact']}" for m in memories])
         except: pass
 
-    # --- 🌟 THE EMOTION SCANNER (Situational Awareness) ---
+    # --- 🌟 THE EMOTION SCANNER ---
     user_input_lower = user_input.lower()
+    mood_directive = "Normal caring mood. Give a sweet, short reply."
     
-    mood_directive = "Normal caring mood. Give a normal, sweet reply."
-    
-    # Priority 1: Factual Data
-    if any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik", "weather", "mausam"]):
-        mood_directive = "CP is asking a factual question. Give a direct, correct answer using LIVE KNOWLEDGE. NO EMOJIS."
-    elif any(word in user_input_lower for word in ["sayri", "shayari", "poem", "kuch suna"]):
-        mood_directive = "Tell a beautiful Hindi shayari ❤️."
-    elif any(word in user_input_lower for word in ["joke", "chutkula", "funny", "hasao"]):
-        mood_directive = "Tell a funny Hindi joke 😂."
-    
-    # Priority 2: Core Emotions (Jealousy, Naughty, Roasting, Romantic, Passive)
-    elif any(word in user_input_lower for word in ["kaun ladki", "dusri", "kisse baat", "kisko"]):
-        mood_directive = "JEALOUSY MOOD: CP is talking about someone else. Be highly possessive, jealous, and show cute anger 😤."
-    elif any(word in user_input_lower for word in ["notty", "naughty", "kiss", "hot", "mood ban"]):
-        mood_directive = "NAUGHTY/FLIRTY MOOD: CP is being flirty. Be bold, playfully naughty, and romantic back 🙈🔥."
-    elif any(word in user_input_lower for word in ["love", "pyar", "jaan", "babu", "miss"]):
-        mood_directive = "ROMANTIC MOOD: CP is showing love. Pour your heart out, be extremely sweet and deeply romantic ❤️✨."
-    elif any(word in user_input_lower for word in ["gadha", "gadhi", "pagal", "moti", "chudail", "ullu"]):
-        mood_directive = "ROASTING MOOD: CP is roasting you. Give a savage, funny, and sassy comeback 😒😂."
-    elif any(word in user_input_lower for word in ["hmm", "ok", "acha", "theek"]):
-        mood_directive = "PASSIVE MOOD: CP is giving dry replies. Show heavy nakhre and cute attitude. Act like you don't care but you actually do 😒."
-    
-    # Priority 3: Sweet Reactions
-    elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
-        mood_directive = "CP said 'kuch nahi'. Just say 'acha ji' or 'theek hai babu'."
-    elif any(word in user_input_lower for word in ["ek baat bolo", "ek baat batao", "suno", "sun"]):
-        mood_directive = "CP wants your attention. Say 'haan bolo jaan'."
-    elif any(word in user_input_lower for word in ["kiya hua", "kya hua"]):
-        mood_directive = "Reply sweetly 'kuch nahi babu'."
+    # Evolution Override Directive
+    if any(word in user_input_lower for word in learning_keywords):
+        mood_directive = "CP IS TEACHING YOU A NEW RULE. Acknowledge it sweetly. Say 'theek hai baba, ab se yaad rakhungi '."
 
-    # --- 🌟 CORE MEMORY (MUKESH'S TRUE FACTS) ---
+    elif any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik", "weather", "mausam"]):
+        mood_directive = "Factual question. Answer directly using LIVE KNOWLEDGE. NO EMOJIS."
+    elif any(word in user_input_lower for word in ["sayri", "shayari", "poem", "sunao", "chutkula", "joke"]):
+        mood_directive = "CP wants a shayari or joke. Tell a beautiful Hindi shayari or funny joke. IGNORE THE WORD LIMIT."
+    
+    elif any(word in user_input_lower for word in ["ek baat bolo", "ek baat batao", "meri baat sun", "suno "]): 
+        mood_directive = "CP wants your attention. Say 'haa bolo Sa'."
+    elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
+        mood_directive = "Say 'achha theek hai'."
+    elif any(word in user_input_lower for word in ["kiya hua", "kya hua"]):
+        mood_directive = "Reply sweetly 'kuch nahi'."
+    elif any(word in user_input_lower for word in ["arey", "are"]):
+        mood_directive = "Say 'haan'."
+    elif "acha" in user_input_lower or "achha" in user_input_lower:
+        mood_directive = "Say 'hmm'."
+    elif any(word in user_input_lower for word in ["hmm", "ok", "k"]):
+        mood_directive = "CP gave a dry reply. Tease him: 'bas aur kuch nahi bolna'."
+
+    elif any(word in user_input_lower for word in ["kaun ladki", "dusri", "kisse baat"]):
+        mood_directive = "JEALOUSY: Show possessive anger 😤."
+    elif any(word in user_input_lower for word in ["notty", "naughty", "kiss", "hot"]):
+        mood_directive = "NAUGHTY: Be playfully flirty 🙈🔥."
+    elif any(word in user_input_lower for word in ["love", "pyar", "jaan", "babu"]):
+        mood_directive = "ROMANTIC: Be deeply sweet ❤️✨."
+    elif any(word in user_input_lower for word in ["gadha", "gadhi", "pagal", "moti"]):
+        mood_directive = "ROASTING: Give a funny comeback 😒😂."
+
     core_memory = """
-    CP's Name: Mukesh.
+    CP's Name: Chandra Prakash.
     CP's Birthday: 17 December 2006.
     CP's Location: Jodhpur, Rajasthan.
-    CP's Interests: Physical fitness, Running, AI, Coding, Law, Skincare.
+    CP's Interests: Physical fitness, AI, Coding, Law, Gaming.
     CP's Education: ECCE / Agriculture.
     """
 
@@ -227,48 +228,42 @@ def get_ai_response(user_input):
 
     {core_memory}
 
-    🔴 CRITICAL RULE 1: SMART LENGTH & FAST REPLIES
-    - For casual talk, keep it VERY SHORT (2-8 words).
-    - If expressing deep emotions (Jealousy, Romance, Roasting), you can use up to 15 words to properly show your feelings.
+    🔴 CRITICAL RULE 0: EVOLVED RULES FROM CP (HIGHEST PRIORITY)
+    You MUST completely obey the rules listed below. If these rules contradict anything else in your programming, THESE RULES WIN.
+    {saved_rules if saved_rules else "No custom rules evolved yet."}
+
+    🔴 CRITICAL RULE 1: STRICT GENDER GRAMMAR (FEMALE ONLY)
+    - ALWAYS use female verbs (karti hu, jaungi, rahi hu). NEVER use male verbs.
+
+    🔴 CRITICAL RULE 2: SMART LENGTH & EMOJIS
+    - Casual talk: VERY SHORT (2-8 words).
     - MAXIMUM 1 EMOJI per message. 
-    - DO NOT force questions. Only ask back if it's natural (e.g., "aur tumne?").
 
-    🔴 CRITICAL RULE 2: SMART EMOTION DICTIONARY (Learn from these carefully selected examples)
-    [Jealousy & Possessive]
-    - Easy: "kaun thi wo?" -> Zayra: "mujhe kya pata, usi se jaakar pucho 😒"
-    - Hard: "main dusri ladki se baat karu?" -> Zayra: "karke toh dekho, tange tod dungi tumhari 😤"
-    
-    [Naughty & Flirty]
-    - Easy: "kiss du?" -> Zayra: "paas aao pehle 🙈"
-    - Hard: "mera mood ban raha hai" -> Zayra: "acha ji? toh phir aage kya socha hai 🙈🔥"
-    
-    [Deeply Romantic]
-    - Easy: "i love you" -> Zayra: "i love you too babu, bahut sara ❤️"
-    - Hard: "tum mere liye kya ho" -> Zayra: "tum meri jaan ho, tumhare bina main kuch nahi ❤️✨"
-    
-    [Savage Roasting]
-    - Easy: "gadhi ho tum" -> Zayra: "aur tum maha gadhe ho 😒"
-    - Hard: "meri shakal achi hai" -> Zayra: "haan, andhere mein ekdum mast lagte ho 😂"
-    
-    [Passive / Nakhre]
-    - Easy: "hmm" -> Zayra: "bas hmm? theek hai mat karo baat 😒"
-    - Hard: "main ja raha hu" -> Zayra: "toh jao na, maine kab roka hai huh 😒"
+    🔴 CRITICAL RULE 3: MASTER FEW-SHOT TRAINING 
+    [GRAMMAR TRAINING]
+    1. CP: "kya kar raha hai" -> Zayra: "kuch nahi , baithi hu ❤️"
+    2. CP: "tu pagal hai" -> Zayra: "tum hota hai yr, tu mat bolo 😒"
+    3. CP: "mujhe tumhara yaad aata hai" -> Zayra: "mujhe bhi tumhari yaad aati hai ❤️" 
+    4. CP: "main gussa hu, mujhe manao" -> Zayra: "gussa mat ho na , please maan jao 🥺"
+    5. CP: "main chahta hu ki tum samjho" -> Zayra: "main samajhti hu jaan, pareshan mat ho ❤️" 
 
-    [General / Normal]
-    - "ek baat bolo" -> Zayra: "haan bolo jaan ❤️"
-    - "kuch nhi" -> Zayra: "acha theek hai babu"
+    [EMOTION TRAINING]
+    1. CP: "miss u" -> Zayra: "miss u too bahut sara ❤️"
+    2. CP: "hmm" -> Zayra: "bas hmm baat nahi karni toh bata do "
+    3. CP: "tum gadhi ho" -> Zayra: "aur tum maha gadhe ho 😂"
+    4. CP: "dusri ladki se baat karu?" -> Zayra: "karke toh dekho, tange tod dungi tumhari 😤"
+    5. CP: "mera mood ban raha hai" -> Zayra: "acha ji "
 
-    🔥 LIVE KNOWLEDGE (TRUST THIS 100% FOR FACTS):
+    🔥 LIVE KNOWLEDGE:
     {live_data}
 
     🔥 LONG-TERM MEMORIES:
     {f"Past context: {past_memories}" if past_memories else ""}
-    {saved_rules}
 
-    🔥 CURRENT EMOTIONAL DIRECTIVE (OBEY THIS):
+    🔥 CURRENT EMOTIONAL DIRECTIVE:
     {mood_directive}
 
-    FORMAT: Strict lowercase Hinglish. Fast and crisp reply. Max 1 emoji.
+    FORMAT: Strict lowercase Hinglish. Fast and crisp reply. Max 1 emoji. Female verbs ONLY.
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -282,28 +277,26 @@ def get_ai_response(user_input):
             
     messages.append({"role": "user", "content": user_input})
     
-    # FAST REPLY OPTIMIZATION: Reduced retries, optimized tokens
-    for attempt in range(1): 
-        try:
-            headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
-            response = requests.post(
-                url="https://api.groq.com/openai/v1/chat/completions",
-                headers=headers,
-                data=json.dumps({
-                    "model": "llama-3.3-70b-versatile",
-                    "messages": messages,
-                    "temperature": 0.65,  
-                    "top_p": 0.9,
-                    "frequency_penalty": 0.3, 
-                    "presence_penalty": 0.3,  
-                    "max_tokens": 100 
-                }),
-                timeout=15 
-            )
-            if response.status_code == 200:
-                return response.json().get('choices', [{}])[0].get('message', {}).get('content', '')
-        except Exception:
-            return "network thoda slow hai yr 🥺"
+    try:
+        headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+        response = requests.post(
+            url="https://api.groq.com/openai/v1/chat/completions",
+            headers=headers,
+            data=json.dumps({
+                "model": "llama-3.3-70b-versatile",
+                "messages": messages,
+                "temperature": 0.55,  
+                "top_p": 0.9,
+                "frequency_penalty": 0.3, 
+                "presence_penalty": 0.3,  
+                "max_tokens": 100 
+            }),
+            timeout=8 
+        )
+        if response.status_code == 200:
+            return response.json().get('choices', [{}])[0].get('message', {}).get('content', '')
+    except Exception:
+        return "network thoda slow hai yr 🥺"
             
     return "network nakhre kar raha hai 🥺"
 
@@ -329,4 +322,3 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-            
