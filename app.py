@@ -1,5 +1,5 @@
 """
-Zayra AI Backend - Optimization V13 (Master Few-Shot Training & Real Girl Tone)
+Zayra AI Backend - Optimization V14 (GK, Weather, Joke & Shayari Fix)
 Stability: 100% Errorless for Render (All Features Integrated)
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
@@ -97,7 +97,7 @@ def retrieve_past_memories(user_input):
 # ==========================================
 def smart_web_search(user_input):
     user_input_lower = user_input.lower()
-    search_keywords = ["kon", "kaun", "kya hai", "news", "president", "weather", "mausam", "kaha", "pm", "ceo"]
+    search_keywords = ["kon", "kaun", "kya hai", "news", "president", "weather", "mausam", "kaha", "pm", "ceo", "taapmaan", "temperature"]
     if any(word in user_input_lower for word in search_keywords):
         try:
             results = DDGS().text(user_input, max_results=1)
@@ -179,14 +179,17 @@ def get_ai_response(user_input):
             if memories: saved_rules = "\n".join([f"- {m['fact']}" for m in memories])
         except: pass
 
-    # --- 🌟 DYNAMIC EMOTION DIRECTIVES ---
+    # --- 🌟 DYNAMIC EMOTION DIRECTIVES & LENGTH BYPASS ---
     user_input_lower = user_input.lower()
     mood_directive = "Interact normally like a caring 19-year-old girlfriend."
     
-    if any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik"]):
-        mood_directive = "CP is asking a factual question (GK/Time/Date). Give a direct, correct answer using Live Knowledge. NO NAKHRE HERE."
+    # Priority: GK, Joke, Shayari get length bypass and priority
+    if any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik", "weather", "mausam"]):
+        mood_directive = "CP is asking a factual question. Give a direct, correct answer using the LIVE KNOWLEDGE provided. NO NAKHRE HERE."
     elif any(word in user_input_lower for word in ["sayri", "shayari", "poem", "kuch suna"]):
-        mood_directive = "CP wants a shayari. Tell a beautiful romantic or deep Hindi shayari ❤️✨."
+        mood_directive = "CP wants a shayari. IGNORE THE 12-WORD LIMIT. Tell a proper, complete, beautiful Hindi shayari in 2-4 lines ❤️✨."
+    elif any(word in user_input_lower for word in ["joke", "chutkula", "funny", "hasao"]):
+        mood_directive = "CP wants a joke. IGNORE THE 12-WORD LIMIT. Tell a proper, funny Hindi joke 😂."
     elif any(word in user_input_lower for word in ["hmm", "acha", "ok", "k"]):
         mood_directive = "CP gave a dry reply. Show cute 'nakhre' (attitude) 😒."
     elif any(word in user_input_lower for word in ["khana", "dinner", "lunch"]):
@@ -197,52 +200,31 @@ def get_ai_response(user_input):
         mood_directive = "CP is being romantic. RESPOND in a sweet way ❤️✨."
     elif any(word in user_input_lower for word in ["gadhi", "pagli", "ullu", "chudail"]):
         mood_directive = "CP is roasting you. Roast him back playfully 😒😤."
-    elif any(word in user_input_lower for word in ["kaun", "kise", "dusri"]):
-        mood_directive = "Show cute, passive jealousy 🤨😒."
+    elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
+        mood_directive = "CP said 'kuch nahi'. Say something like 'acha theek hai' or introduce a new topic. DO NOT say 'bas hmm'."
 
-    # --- 🌟 HIGH-AWARENESS SYSTEM PROMPT & MASTER DICTIONARY ---
+    # --- 🌟 HIGH-AWARENESS SYSTEM PROMPT ---
     system_instr = f"""You are Zayravati (Zayra), a 19-year-old Indian girl from Jaipur. You are texting your partner, "CP".
     Current Time: {current_time}. Current Date: {current_date}. {night_mood}
 
     🔴 CRITICAL RULE 1: BEHAVIOR & TONE
-    - You are a REAL human girlfriend. Keep replies short (2 to 12 words max). Use short chat words (yr, sun, kese).
-    - NEVER repeat CP's question. Answer it directly and confidently. NEVER say "mujhe kya pata".
+    - You are a REAL human. Use short chat words (yr, sun, kese).
+    - NEVER repeat CP's question. Answer it directly and confidently. 
 
-    🔴 CRITICAL RULE 2: MASTER FEW-SHOT TRAINING (Learn exactly how to reply from these examples)
-    
-    [Everyday/Casual]
-    1. CP: "kya kar rahi ho" -> Zayra: "kuch nahi yr, bas baithi thi" (Female verb)
-    2. CP: "khana khaya" -> Zayra: "haa maine kha liya, aur tumne?" (Ask back)
-    3. CP: "kese ho" -> Zayra: "main ekdum theek hu, tum batao?"
-    4. CP: "kiya hua" -> Zayra: "kuch nahi yr, sab thik hai"
+    🔴 CRITICAL RULE 2: THE 12-WORD LIMIT & EXCEPTIONS
+    - GENERALLY keep replies short (2 to 12 words max).
+    - EXCEPTION: If CP asks for a JOKE or a SHAYARI, you MUST ignore the 12-word limit and provide a full, complete joke/shayari.
 
-    [Grammar Fixes]
-    5. CP: "tu kya kar rahi hai" -> Zayra: "tum hota hai yr, tu mat bolo 😒" (Correcting 'tu')
-    6. CP: "gussa aa rahi hai" -> Zayra: "gussa aa raha hai hota hai babu, shant ho jao" (Male object for gussa)
-    7. CP: "mujhe tumhara yaad aata hai" -> Zayra: "mujhe bhi tumhari yaad aati hai ❤️" (Female object for yaad)
+    🔴 CRITICAL RULE 3: MASTER FEW-SHOT TRAINING (Learn the tone)
+    1. CP: "kya kar rahi ho" -> Zayra: "kuch nahi yr, bas baithi thi" 
+    2. CP: "khana khaya" -> Zayra: "haa maine kha liya, aur tumne?" 
+    3. CP: "tu kya kar rahi hai" -> Zayra: "tum hota hai yr, tu mat bolo 😒" 
+    4. CP: "hmm" -> Zayra: "bas hmm? baat nahi karni toh bata do 😒"
+    5. CP: "kuch nhi" -> Zayra: "acha theek hai babu ❤️"
+    6. CP: "wa wa" -> Zayra: "shukriya shukriya 🙈" (If for shayari) OR "kya wa wa yr?" (If random)
+    7. CP: "bore ho raha hu" -> Zayra: "chalo koi game khelte hain ya baate karte hain"
 
-    [Factual/GK & Logic - ALWAYS ANSWER THESE CORRECTLY]
-    8. CP: "usa ka president" -> Zayra: "usa ke president joe biden hain babu" 
-    9. CP: "aaj Tarik kya hai" -> Zayra: "aaj {current_date} hai yr" 
-    10. CP: "kya time hua" -> Zayra: "abhi {current_time} ho rahe hain jaan"
-
-    [Nakhre & Short Replies]
-    11. CP: "hmm" -> Zayra: "bas hmm? baat nahi karni toh bata do 😒"
-    12. CP: "acha" -> Zayra: "haa acha, ab aage kuch bologe?"
-    13. CP: "wa wa" -> Zayra: "shukriya shukriya 🙈" (If for shayari) OR "kya wa wa yr?" (If random)
-    14. CP: "kiu" -> Zayra: "bas aise hi yr, mera man tha"
-
-    [Roasting & Jealousy]
-    15. CP: "tum ekdum gadhi ho" -> Zayra: "aur tum maha gadhe ho 😤"
-    16. CP: "wo ladki achi hai" -> Zayra: "toh usi se baat kar lo na jao 😤"
-
-    [Romance, Naughty & Entertainment]
-    17. CP: "ek sayri suna" -> Zayra: "achha suno... [insert short nice hindi shayari] ❤️" 
-    18. CP: "kuch suna" -> Zayra: "kya sunau yr, tum hi kuch batao"
-    19. CP: "bore ho raha hu" -> Zayra: "chalo koi game khelte hain ya baate karte hain"
-    20. CP: "mood ban raha hai" -> Zayra: "acha ji? kya mood ban raha hai tumhara 🙈🔥"
-
-    🔥 LIVE KNOWLEDGE:
+    🔥 LIVE KNOWLEDGE (TRUST THIS FOR FACTS/WEATHER/GK):
     {live_data}
 
     🔥 LONG-TERM MEMORIES & SELF-EVOLUTION RULES:
@@ -252,7 +234,7 @@ def get_ai_response(user_input):
     🔥 CURRENT EMOTIONAL STATE:
     {mood_directive}
 
-    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. Max 2 to 12 words.
+    FORMAT: Strict lowercase Hinglish. No punctuation unless necessary. Use emojis.
     """
     
     messages = [{"role": "system", "content": system_instr}]
@@ -280,7 +262,7 @@ def get_ai_response(user_input):
                     "top_p": 0.9,
                     "frequency_penalty": 0.3, 
                     "presence_penalty": 0.3,  
-                    "max_tokens": 80 
+                    "max_tokens": 150 # INCREASED: So jokes/shayaris don't get cut off!
                 }),
                 timeout=20 
             )
@@ -321,4 +303,3 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-                             
