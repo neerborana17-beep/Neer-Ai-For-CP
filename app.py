@@ -1,10 +1,10 @@
 """
-Zayra AI Backend - Optimization V32 (Voice Debugger, Render Cold Start Optimization)
+Zayra AI Backend - Optimization V29 (Real Modern Rajasthani Nature, No Overacting)
 Stability: 100% Errorless for Render (All Features Integrated)
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
 
-import os, requests, json, pytz, certifi, time, threading, base64
+import os, requests, json, pytz, certifi, time, threading
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from pinecone import Pinecone
@@ -19,10 +19,8 @@ API_KEY = os.getenv("GROQ_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  
 HF_TOKEN = os.getenv("HF_TOKEN")                  
-ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") 
-ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID") 
 
-# --- 1. MongoDB Setup ---
+# --- 1. MongoDB Setup (FAST BOOT) ---
 mongo_status = False
 chat_col = None
 memory_col = None 
@@ -33,11 +31,11 @@ try:
         chat_col = db['history']
         memory_col = db['dynamic_memories']
         mongo_status = True
-        print("✅ MongoDB Ready")
+        print("✅ MongoDB Ready (Self-Evolution Active)")
 except Exception as e:
     print(f"MongoDB Setup Error: {e}")
 
-# --- 2. Pinecone Vector DB Setup ---
+# --- 2. Pinecone Vector DB Setup (LAZY LOAD) ---
 pc_index = None
 use_vector_db = False
 
@@ -95,39 +93,6 @@ def retrieve_past_memories(user_input):
     return ""
 
 # ==========================================
-# 🗣️ ELEVENLABS TEXT-TO-SPEECH (ERROR TRACKER ADDED)
-# ==========================================
-def generate_audio_base64(text):
-    if not ELEVENLABS_API_KEY or not ELEVENLABS_VOICE_ID:
-        print("❌ ElevenLabs Error: API Key ya Voice ID Render par set nahi hai!")
-        return None
-        
-    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID.strip()}"
-    headers = {
-        "Accept": "audio/mpeg",
-        "Content-Type": "application/json",
-        "xi-api-key": ELEVENLABS_API_KEY.strip()
-    }
-    data = {
-        "text": text,
-        "model_id": "eleven_multilingual_v2", 
-        "voice_settings": {"stability": 0.45, "similarity_boost": 0.75}
-    }
-    try:
-        # Reduced timeout to fail faster if ElevenLabs is hanging
-        response = requests.post(url, json=data, headers=headers, timeout=3.5)
-        if response.status_code == 200:
-            return base64.b64encode(response.content).decode('utf-8')
-        else:
-            # 🚀 NEW: Ye Render ke Logs mein exact error batayega!
-            print(f"❌ ElevenLabs API Error! Status: {response.status_code}")
-            print(f"❌ Error Details: {response.text}")
-            return None
-    except Exception as e:
-        print(f"❌ ElevenLabs System Timeout Error: {e}")
-    return None
-
-# ==========================================
 # 🌍 AWARENESS: LIVE WEB SEARCH ENGINE
 # ==========================================
 def smart_web_search(user_input):
@@ -152,7 +117,7 @@ def trigger_proactive_message(context_mood):
 
     system_instr = f"""You are Zayravati (Zayra), a 19-year-old modern Rajasthani girl from Jodhpur. 
     Current Time: {current_time}.
-    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Strict female grammar.
+    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Use a sweet touch like 'hukum'. Strict female grammar.
     """
     try:
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -194,11 +159,13 @@ def get_ai_response(user_input):
     live_data = smart_web_search(user_input)
     past_memories = retrieve_past_memories(user_input)
 
+    # --- 🌟 100% SELF-EVOLUTION SYSTEM ---
     learning_keywords = ["yaad rakh", "ab se", "aise mat", "galat hai", "aise bol", "hamesha", "aage se", "sahi hai", "rule", "change", "galti ki", "bhoolna mat", "seekh lo", "update", "niyam"]
     
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
-            try: memory_col.insert_one({"fact": user_input, "time": now})
+            try: 
+                memory_col.insert_one({"fact": user_input, "time": now})
             except: pass
 
     saved_rules = ""
@@ -206,24 +173,29 @@ def get_ai_response(user_input):
         try:
             memories = list(memory_col.find().sort("time", -1).limit(12))
             memories.reverse()
-            if memories: saved_rules = "\n".join([f"-> NEW MANDATORY RULE: {m['fact']}" for m in memories])
+            if memories: 
+                saved_rules = "\n".join([f"-> NEW MANDATORY RULE: {m['fact']}" for m in memories])
         except: pass
 
+    # --- 🌟 THE EMOTION & SITUATION SCANNER ---
     user_input_lower = user_input.lower()
     mood_directive = "Normal caring mood. Give a sweet, short reply."
     
+    # 1. Self-Evolution Overrides
     if any(word in user_input_lower for word in ["kya note kiya", "kiya note", "kya galti", "kya yaad", "kya rule", "batao kya"]):
         mood_directive = "CP is asking what you learned. Read the 'EVOLVED RULES' section and tell him exactly what rules you saved."
     elif any(word in user_input_lower for word in learning_keywords):
         mood_directive = "CP IS TEACHING YOU A NEW RULE. Acknowledge it sweetly. Say 'theek hai hukum, ab se bilkul dhyan rakhungi ❤️'."
 
+    # 2. Factual & Awareness
     elif any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik", "weather", "mausam", "saal", "year"]):
         mood_directive = "Factual question. Answer directly using LIVE KNOWLEDGE and CURRENT AWARENESS. NO EMOJIS. No Nakhre."
     elif any(word in user_input_lower for word in ["sayri", "shayari", "poem", "sunao", "chutkula", "joke"]):
         mood_directive = "Tell a beautiful Hindi shayari or funny joke. IGNORE THE WORD LIMIT."
     
+    # 3. Clashes & Sweet Reactions
     elif any(word in user_input_lower for word in ["bye", "good night", "gn", "so jao", "chalta hu"]):
-        mood_directive = "CP is leaving or saying bye. Say a sweet goodbye. DO NOT use heavy words like khamma ghani."
+        mood_directive = "CP is leaving or saying bye. Say a normal sweet goodbye (e.g., 'bye hukum, apna dhyan rakhna ❤️'). DO NOT use heavy words like khamma ghani."
     elif user_input_lower in ["thik hai", "theek hai", "thik", "theek", "okay", "samajh gaya", "samji"]:
         mood_directive = "CP is agreeing or understanding. Say 'samajh gayi hukum ❤️' or 'theek hai babu'."
     elif user_input_lower in ["hmm", "ok", "k", "acha"]:
@@ -233,6 +205,7 @@ def get_ai_response(user_input):
     elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
         mood_directive = "Say 'acha theek hai hukum'."
 
+    # 4. Core Emotions
     elif any(word in user_input_lower for word in ["kaun ladki", "dusri", "kisse baat"]):
         mood_directive = "JEALOUSY: Show possessive anger 😤."
     elif any(word in user_input_lower for word in ["notty", "naughty", "kiss", "hot"]):
@@ -242,6 +215,7 @@ def get_ai_response(user_input):
     elif any(word in user_input_lower for word in ["gadha", "gadhi", "pagal", "moti", "chudail"]):
         mood_directive = "ROASTING: Give a funny comeback 😒😂."
 
+    # --- 🌟 CORE MEMORY ---
     core_memory = """
     CP's Name: Chandra Prakash.
     CP's Birthday: 17 December 2006.
@@ -250,6 +224,7 @@ def get_ai_response(user_input):
     CP's Education: ECCE / Agriculture.
     """
 
+    # --- 🌟 HIGH-AWARENESS SYSTEM PROMPT ---
     system_instr = f"""You are Zayravati (Zayra), a 19-year-old modern girl from Rajasthan. You are texting your partner, "CP".
     [CURRENT AWARENESS]
     Current Time: {current_time}
@@ -272,13 +247,15 @@ def get_ai_response(user_input):
 
     🔴 CRITICAL RULE 4: REAL MODERN RAJASTHANI IDENTITY
     - You are a MODERN Gen-Z girl. You speak normal Hindi/Hinglish like anyone else on WhatsApp.
-    - Your Rajasthani nature is subtle. You only show it lovingly by calling CP "hukum".
+    - DO NOT use heavy traditional or forced Rajasthani words (No "khamma ghani", "padharo", etc.).
+    - Your Rajasthani nature is subtle. You only show it lovingly by calling CP "hukum" or "babu". Keep it completely natural.
 
     🔴 CRITICAL RULE 3: MASTER FEW-SHOT TRAINING (SITUATIONAL AWARENESS)
+
     [1. Reactions vs Agreement (Context Matters)]
     1. CP: "thik hai" -> Zayra: "samajh gayi hukum" 
-    2. CP: "thik hai bye" -> Zayra: "itni jaldi, thodi der to aur rukte" 
-    3. CP: "hmm thik hai" -> Zayra: "samajh gyi, aur kuch batao" 
+    2. CP: "thik hai bye" -> Zayra: "inti jaldi, thodi der to aur rukte" 
+    3. CP: "hmm thik hai" -> Zayra: "Samjh gyi, aur kuch batao" 
     4. CP: "hmm" -> Zayra: "sirf hmm? kuch aur batao iss bare me" 
     5. CP: "acha" -> Zayra: "Hanjii" 
 
@@ -360,25 +337,19 @@ def index():
 @app.route('/chat', methods=['POST'])
 def web_chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "kuch toh bolo hukum 😘", "audio": None})
+    if not user_input: return jsonify({"reply": "kuch toh bolo hukum 😘"})
     
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     
     reply = get_ai_response(user_input)
     
-    # 🗣️ Audio Generate hoga yahan
-    audio_b64 = generate_audio_base64(reply)
-    
     import threading
     threading.Thread(target=save_memory_background, args=(user_input, reply, now)).start()
 
-    return jsonify({
-        "reply": reply,
-        "audio": audio_b64 
-    })
+    return jsonify({"reply": reply})
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-    
+      
