@@ -119,10 +119,26 @@
                 
                 // Hide typing animation
                 typingIndicator.style.display = 'none';
+                
+                // 1. Text Message dikhao
                 addMessage(data.reply, false);
-            } catch {
+                
+                // 2. 🗣️ AUDIO PLAY LOGIC
+                if (data.audio) {
+                    try {
+                        const audio = new Audio("data:audio/mpeg;base64," + data.audio);
+                        audio.play().catch(e => {
+                            console.log("Audio play blocked by browser or error:", e);
+                        });
+                    } catch (err) {
+                        console.error("Audio playback error:", err);
+                    }
+                }
+
+            } catch (error) {
                 typingIndicator.style.display = 'none';
                 addMessage("babu, lagta hai network nakhre kar raha hai! 🙄", false);
+                console.error("Fetch Error:", error);
             }
         }
 
@@ -138,5 +154,5 @@
         }
     </script>
 </body>
-</html>
-
+    </html>
+    
