@@ -6,48 +6,123 @@
     <title>Zayra AI | Powered by CP</title>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --bg-color: #0f172a; --accent-color: #f472b6; --text-color: #f8fafc; }
+        /* WhatsApp Theme Colors */
+        :root { 
+            --bg-color: #EFEAE2; /* Light WhatsApp background */
+            --header-bg: #008069; /* WhatsApp Green Header */
+            --zayra-msg-bg: #dcf8c6; /* Light green for Zayra (As requested) */
+            --user-msg-bg: #ffffff; /* White for User (As requested) */
+            --text-color: #111b21; /* Dark text for readability */
+        }
         
-        body { font-family: 'Outfit', sans-serif; background: var(--bg-color); color: var(--text-color); margin: 0; padding: 0; display: flex; justify-content: center; position: fixed; top: 0; bottom: 0; left: 0; right: 0; overflow: hidden; }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: var(--bg-color); 
+            margin: 0; padding: 0; 
+            display: flex; justify-content: center; 
+            position: fixed; top: 0; bottom: 0; left: 0; right: 0; 
+            overflow: hidden; 
+        }
         
-        .chat-container { width: 100%; max-width: 450px; height: 100%; background: rgba(30, 41, 59, 1); display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+        /* Optional: WhatsApp chat pattern overlay */
+        .chat-container { 
+            width: 100%; max-width: 450px; height: 100%; 
+            background-color: var(--bg-color);
+            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); /* Light doodle background */
+            background-blend-mode: multiply;
+            display: flex; flex-direction: column; overflow: hidden; 
+            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
+        }
         
-        .header { flex-shrink: 0; padding: 18px 22px; border-bottom: 1px solid rgba(255,255,255,0.08); display: flex; justify-content: space-between; align-items: center; background: rgba(244, 114, 182, 0.05); z-index: 10; }
+        .header { 
+            flex-shrink: 0; padding: 15px 22px; 
+            display: flex; justify-content: space-between; align-items: center; 
+            background: var(--header-bg); z-index: 10; 
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
         .header-left { display: flex; flex-direction: column; }
-        .powered-by { font-size: 0.6rem; letter-spacing: 1.2px; color: rgba(244, 114, 182, 0.7); text-transform: uppercase; margin-bottom: 2px; }
-        .header h1 { font-size: 1.5rem; margin: 0; color: white; font-weight: 600; }
+        .powered-by { font-size: 0.6rem; letter-spacing: 1px; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; margin-bottom: 2px; }
+        .header h1 { font-size: 1.4rem; margin: 0; color: white; font-weight: 600; }
         
         .status-wrapper { display: flex; align-items: center; margin-top: 3px; }
-        .status-dot { height: 7px; width: 7px; background-color: #10b981; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 8px #10b981; animation: pulse 2s infinite; }
-        .online-text { font-size: 0.75rem; color: rgba(255, 255, 255, 0.6); font-weight: 400; }
+        .status-dot { height: 7px; width: 7px; background-color: #4ade80; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px #4ade80; animation: pulse 2s infinite; }
+        .online-text { font-size: 0.75rem; color: rgba(255, 255, 255, 0.9); font-weight: 400; }
         
-        .reset-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; opacity: 0.4; transition: 0.3s; padding: 5px; }
+        .reset-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; opacity: 0.8; transition: 0.3s; padding: 5px; color: white; }
         .reset-btn:hover { opacity: 1; transform: scale(1.1); }
 
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
-        .message { max-width: 80%; padding: 12px 16px; border-radius: 18px; font-size: 0.95rem; line-height: 1.4; animation: fadeIn 0.3s ease; word-wrap: break-word; }
-        .user-message { align-self: flex-end; background: var(--accent-color); color: #4c0519; border-bottom-right-radius: 4px; box-shadow: 0 4px 12px rgba(244, 114, 182, 0.2); }
-        .ai-message { align-self: flex-start; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.03); border-bottom-left-radius: 4px; }
+        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
         
-        /* New WhatsApp Style Typing Indicator */
-        .typing-indicator { display: none; align-self: flex-start; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.03); border-bottom-left-radius: 4px; padding: 12px 16px; border-radius: 18px; width: fit-content; margin-top: auto; }
-        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: var(--accent-color); border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
+        .message { 
+            max-width: 75%; padding: 10px 14px; 
+            border-radius: 8px; font-size: 0.95rem; 
+            line-height: 1.4; animation: fadeIn 0.3s ease; 
+            word-wrap: break-word; color: var(--text-color);
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        
+        /* User Message (White as requested) */
+        .user-message { 
+            align-self: flex-end; 
+            background: var(--user-msg-bg); 
+            border-top-right-radius: 0; 
+        }
+        
+        /* Zayra Message (Green as requested) */
+        .ai-message { 
+            align-self: flex-start; 
+            background: var(--zayra-msg-bg); 
+            border-top-left-radius: 0; 
+        }
+        
+        .typing-indicator { 
+            display: none; align-self: flex-start; 
+            background: var(--zayra-msg-bg); 
+            border-top-left-radius: 0; padding: 12px 16px; 
+            border-radius: 8px; width: fit-content; margin-top: auto; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #008069; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
         .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
         .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
         
-        .input-area { flex-shrink: 0; padding: 12px 16px 16px 16px; display: flex; gap: 12px; background: rgba(15, 23, 42, 1); border-top: 1px solid rgba(255,255,255,0.05); }
-        input { flex: 1; background: rgba(255,255,255,0.05); border: 1px solid rgba(244,114,182,0.2); padding: 14px 16px; border-radius: 20px; color: white; outline: none; font-size: 1rem; transition: 0.2s; }
-        input:focus { border-color: var(--accent-color); background: rgba(255,255,255,0.1); }
+        .input-area { 
+            flex-shrink: 0; padding: 10px; 
+            display: flex; gap: 8px; 
+            background: #f0f2f5; 
+        }
         
-        button#send-btn { background: var(--accent-color); border: none; padding: 0 22px; border-radius: 20px; font-weight: 600; cursor: pointer; color: #4c0519; transition: 0.2s; font-size: 1rem; }
+        input { 
+            flex: 1; background: #ffffff; 
+            border: none; padding: 12px 18px; 
+            border-radius: 24px; color: var(--text-color); 
+            outline: none; font-size: 1rem; 
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        input::placeholder { color: #8696a0; }
+        
+        button#send-btn { 
+            background: #00a884; border: none; 
+            height: 44px; width: 44px; 
+            border-radius: 50%; font-weight: 600; 
+            cursor: pointer; color: white; 
+            transition: 0.2s; font-size: 0;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        /* Send icon via CSS */
+        button#send-btn::after {
+            content: "➤"; font-size: 1.2rem; margin-left: 2px;
+        }
         button#send-btn:active { transform: scale(0.95); }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
 
-        #chat-box::-webkit-scrollbar { width: 4px; }
-        #chat-box::-webkit-scrollbar-thumb { background: rgba(244, 114, 182, 0.2); border-radius: 10px; }
+        #chat-box::-webkit-scrollbar { width: 5px; }
+        #chat-box::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -58,21 +133,21 @@
                 <h1>Zayra</h1>
                 <div class="status-wrapper">
                     <span class="status-dot"></span>
-                    <span class="online-text">Active now</span>
+                    <span class="online-text">online</span>
                 </div>
             </div>
             <button class="reset-btn" onclick="clearMemory()" title="Clear Chat History">🗑️</button>
         </div>
         
         <div id="chat-box">
-            <div class="message ai-message">hey... I'm here for you? 😘</div>
+            <div class="message ai-message">hmmm... aaj meri yaad nahi aayi kya? 🥺</div>
             <div id="typing" class="typing-indicator">
                 <span></span><span></span><span></span>
             </div>
         </div>
         
         <form class="input-area" onsubmit="sendMessage(event)" autocomplete="off">
-            <input type="text" id="user-input" name="hidden_chat" autocomplete="new-password" placeholder="Message..." required>
+            <input type="text" id="user-input" name="hidden_chat" autocomplete="new-password" placeholder="Message" required>
             <button type="submit" id="send-btn">Send</button>
         </form>
     </div>
@@ -87,7 +162,6 @@
             div.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
             div.textContent = text;
             
-            // Message ko hamesha typing indicator ke upar dalna hai
             chatBox.insertBefore(div, typingIndicator);
             scrollToBottom();
         }
@@ -105,7 +179,6 @@
             userInput.value = '';
             userInput.focus();
             
-            // Show typing animation
             typingIndicator.style.display = 'block';
             scrollToBottom();
 
@@ -117,12 +190,11 @@
                 });
                 const data = await res.json();
                 
-                // Hide typing animation
                 typingIndicator.style.display = 'none';
                 addMessage(data.reply, false);
             } catch {
                 typingIndicator.style.display = 'none';
-                addMessage("babu, lagta hai network nakhre kar raha hai! 🙄", false);
+                addMessage("yaar lagta hai network nakhre kar raha hai! 🙄", false);
             }
         }
 
@@ -138,4 +210,5 @@
         }
     </script>
 </body>
-</html>
+                </html>
+    
