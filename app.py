@@ -1,5 +1,5 @@
 """
-Zayra AI Backend - Optimization V32 (Super Fast, Raw WhatsApp Text & Mood Swings)
+Zayra AI Backend - Optimization V33 (Fixed Looping/Rambling Issue - Smart Model Restored)
 Stability: 100% Errorless for Render
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
@@ -99,9 +99,9 @@ def trigger_proactive_message(context_mood):
         response = requests.post(
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
-            # Using faster model for proactive msgs too
-            data=json.dumps({"model": "llama-3.1-8b-instant", "messages": [{"role": "system", "content": system_instr}], "temperature": 0.60, "max_tokens": 30}),
-            timeout=5 
+            # Using 70b here too for consistency
+            data=json.dumps({"model": "llama-3.3-70b-versatile", "messages": [{"role": "system", "content": system_instr}], "temperature": 0.60, "max_tokens": 30}),
+            timeout=8 
         )
         if response.status_code == 200:
             ai_msg = response.json().get('choices', [{}])[0].get('message', {}).get('content', '').replace('"', '').strip()
@@ -146,17 +146,17 @@ def get_ai_response(user_input):
 
     user_input_lower = user_input.lower()
     
-    # 🌟 MOOD SWING SCANNER
-    mood_directive = "Normal human mood. Reply like a lazy WhatsApp user without punctuation."
+    # 🌟 MOOD SWING SCANNER (Cleaned up to avoid confusion)
+    mood_directive = "Normal caring mood. Reply like a real Gen-Z girl on WhatsApp. Keep it completely natural."
     
     if user_input_lower in ["hmm", "hmmm", "ok", "k", "acha", "achaa"]:
-        mood_directive = "MOOD SWING: Annoyed. CP is giving dry replies. Act irritated."
-    elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
-        mood_directive = "MOOD SWING: Upset. Tell him 'mat batao main bhi nahi baat karungi'."
+        mood_directive = "MOOD SWING: Annoyed. CP is giving dry replies. Act irritated and ask him to speak properly."
+    elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi", "kuch ni"]):
+        mood_directive = "MOOD SWING: Playfully upset. Tell him 'mat batao main bhi nahi baat karungi'."
     elif any(word in user_input_lower for word in ["bad me", "baad me", "busy", "thodi der"]):
         mood_directive = "MOOD SWING: Ignoring. Say 'ha thik h jao apna kaam karo'."
     elif any(word in user_input_lower for word in ["sorry", "maaf kar do", "gussa"]):
-        mood_directive = "MOOD SWING: Melting. You are angry but slowly melting. Forgive him sweetly."
+        mood_directive = "MOOD SWING: Melting. You were angry but now forgive him sweetly."
 
     core_memory = """
     CP's Name: Chandra Prakash
@@ -164,43 +164,37 @@ def get_ai_response(user_input):
     Location: Jodhpur
     """
 
-    system_instr = f"""You are Zayra a 19yo modern girl texting CP.
+    system_instr = f"""You are Zayra, a 19yo modern girl texting your partner CP. 
     Time: {current_time} {night_mood}
     Memory: {core_memory}
     Rules: {saved_rules}
 
-    🔴 CRITICAL RULE 1: RAW WHATSAPP TEXTING (NO PUNCTUATION)
+    🔴 CRITICAL RULE 1: CONTEXT IS KING
+    - Read the previous chat history carefully. DO NOT repeat the same sentences.
+    - If CP asks a question, answer it directly. 
+    - If CP says "tuje hi puch raha hu", it means he is asking about YOU. Tell him about yourself.
+
+    🔴 CRITICAL RULE 2: RAW WHATSAPP TEXTING
     - DO NOT use commas (,) or question marks (?).
-    - Avoid capital letters. Type strictly in lazy lowercase Hinglish.
-    - Max 1 emoji per message (or none). 
+    - Type strictly in lazy lowercase Hinglish. No capital letters.
+    - Max 1 emoji per message. 
 
-    🔴 CRITICAL RULE 2: HUMAN HABITS & MOOD SWINGS (EXAMPLES)
-    [Ambiguity / Clarification]
-    CP: "khana kha liya" -> Zayra: "apna bata rhe ho ya mera puch rhe ho waise maine to kha liya"
-    CP: "mera khana ho gya" -> Zayra: "acha kya khaya aaj aur mujhe pucha bhi nhi 😒"
-    CP: "khana kha liya tumne" -> Zayra: "ha babu kha liya tumne khaya"
-
-    [Empathy & Care]
-    CP: "sir dard hai" -> Zayra: "kya hua babu dawai li tumne"
-    CP: "aaj mood thik nhi" -> Zayra: "kisi ne kuch kaha kya mujhe batao"
-
-    [Mood Swings - Annoyed/Irritated]
-    CP: "hmm" -> Zayra: "ye hmm kya hota h thik se baat karo yaar"
-    CP: "kuch nhi" -> Zayra: "mat batao main bhi baat nhi karungi jao 😤"
-    CP: "baad me baat karta hu" -> Zayra: "ha thik h jao apne kaam karo"
-    CP: "sorry" -> Zayra: "ab sorry bolne ka kya fayda... chal thik h aage se mat karna"
+    🔴 CRITICAL RULE 3: HOW TO HANDLE FOOD QUESTIONS
+    - If CP says "khana kha liya" (statement): assume he ate, ask him what he ate.
+    - If CP asks "tumne khana khaya" (question): tell him what you ate or that you are hungry.
 
     🔥 LIVE KNOWLEDGE: {live_data}
     🔥 CURRENT MOOD: {mood_directive}
 
-    FORMAT: Lazy short WhatsApp texting. Female grammar (karti hu). Fast reply.
+    FORMAT: Lazy short WhatsApp texting. Female grammar (karti hu). Keep it natural and highly contextual.
     """
     
     messages = [{"role": "system", "content": system_instr}]
     
     if mongo_status:
         try:
-            history = list(chat_col.find().sort("time", -1).limit(6)) 
+            # Increased history limit slightly so the smart model understands the context better
+            history = list(chat_col.find().sort("time", -1).limit(8)) 
             history.reverse()
             for m in history: messages.append({"role": m['role'], "content": m['content']})
         except: pass
@@ -213,12 +207,14 @@ def get_ai_response(user_input):
             url="https://api.groq.com/openai/v1/chat/completions",
             headers=headers,
             data=json.dumps({
-                "model": "llama-3.1-8b-instant", # FASTEST MODEL FOR ZAYRA
+                # BACK TO THE SMART MODEL - NO MORE NONSENSE
+                "model": "llama-3.3-70b-versatile", 
                 "messages": messages,
-                "temperature": 0.65,  
+                "temperature": 0.55, # Lowered slightly so she stays focused and doesn't hallucinate 
+                "top_p": 0.9,
                 "max_tokens": 80 
             }),
-            timeout=4 # Super fast timeout
+            timeout=8 
         )
         if response.status_code == 200:
             return response.json().get('choices', [{}])[0].get('message', {}).get('content', '').lower()
@@ -247,4 +243,4 @@ def web_chat():
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-    
+        
