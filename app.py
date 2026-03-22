@@ -1,10 +1,10 @@
 """
-Zayra AI Backend - Optimization V29 (Real Modern Rajasthani Nature, No Overacting)
+Zayra AI Backend - Optimization V31 (ElevenLabs Voice + Text Integrated, User Edits Preserved)
 Stability: 100% Errorless for Render (All Features Integrated)
 Requires: pip install Flask groq-ai requests pymongo pytz certifi apscheduler duckduckgo-search gunicorn
 """
 
-import os, requests, json, pytz, certifi, time, threading
+import os, requests, json, pytz, certifi, time, threading, base64
 from flask import Flask, render_template, request, jsonify
 from pymongo import MongoClient
 from pinecone import Pinecone
@@ -19,6 +19,8 @@ API_KEY = os.getenv("GROQ_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")  
 HF_TOKEN = os.getenv("HF_TOKEN")                  
+ELEVENLABS_API_KEY = os.getenv("ELEVENLABS_API_KEY") # Voice API Key
+ELEVENLABS_VOICE_ID = os.getenv("ELEVENLABS_VOICE_ID") # Voice ID
 
 # --- 1. MongoDB Setup (FAST BOOT) ---
 mongo_status = False
@@ -31,7 +33,7 @@ try:
         chat_col = db['history']
         memory_col = db['dynamic_memories']
         mongo_status = True
-        print("✅ MongoDB Ready (Self-Evolution Active)")
+        print("✅ MongoDB Ready (Ultra-Strong Self-Evolution Active)")
 except Exception as e:
     print(f"MongoDB Setup Error: {e}")
 
@@ -56,6 +58,7 @@ def get_embedding(text):
     try:
         url = "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2"
         headers = {"Authorization": f"Bearer {HF_TOKEN}"}
+        # 🚀 SPEED FIX: Timeout 1.5s
         res = requests.post(url, headers=headers, json={"inputs": text}, timeout=1.5)
         if res.status_code == 200:
             return res.json()
@@ -93,6 +96,38 @@ def retrieve_past_memories(user_input):
     return ""
 
 # ==========================================
+# 🗣️ NEW: ELEVENLABS TEXT-TO-SPEECH
+# ==========================================
+def generate_audio_base64(text):
+    """Converts AI text to speech and returns base64 string"""
+    if not ELEVENLABS_API_KEY or not ELEVENLABS_VOICE_ID:
+        return None
+        
+    url = f"https://api.elevenlabs.io/v1/text-to-speech/{ELEVENLABS_VOICE_ID}"
+    headers = {
+        "Accept": "audio/mpeg",
+        "Content-Type": "application/json",
+        "xi-api-key": ELEVENLABS_API_KEY
+    }
+    # multilingual_v2 ensures perfect Hinglish/Hindi pronunciation
+    data = {
+        "text": text,
+        "model_id": "eleven_multilingual_v2", 
+        "voice_settings": {
+            "stability": 0.45,       # Gives it emotion
+            "similarity_boost": 0.75 
+        }
+    }
+    try:
+        # Timeout set to 5s so it doesn't freeze the app if ElevenLabs is slow
+        response = requests.post(url, json=data, headers=headers, timeout=5)
+        if response.status_code == 200:
+            return base64.b64encode(response.content).decode('utf-8')
+    except Exception as e:
+        print(f"ElevenLabs Error: {e}")
+    return None
+
+# ==========================================
 # 🌍 AWARENESS: LIVE WEB SEARCH ENGINE
 # ==========================================
 def smart_web_search(user_input):
@@ -117,7 +152,7 @@ def trigger_proactive_message(context_mood):
 
     system_instr = f"""You are Zayravati (Zayra), a 19-year-old modern Rajasthani girl from Jodhpur. 
     Current Time: {current_time}.
-    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Use a sweet touch like 'hukum'. Strict female grammar.
+    TASK: Initiate a WhatsApp chat with "CP". Keep it 2 to 6 words. Strict female grammar.
     """
     try:
         headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
@@ -159,8 +194,12 @@ def get_ai_response(user_input):
     live_data = smart_web_search(user_input)
     past_memories = retrieve_past_memories(user_input)
 
-    # --- 🌟 100% SELF-EVOLUTION SYSTEM ---
-    learning_keywords = ["yaad rakh", "ab se", "aise mat", "galat hai", "aise bol", "hamesha", "aage se", "sahi hai", "rule", "change", "galti ki", "bhoolna mat", "seekh lo", "update", "niyam"]
+    # --- 🌟 ULTRA-STRONG SELF-EVOLUTION SYSTEM ---
+    learning_keywords = [
+        "yaad rakh", "ab se", "aise mat", "galat hai", "aise bol", 
+        "hamesha", "aage se", "sahi hai", "rule", "change", 
+        "galti ki", "bhoolna mat", "seekh lo", "update", "niyam"
+    ]
     
     if any(word in user_input.lower() for word in learning_keywords):
         if mongo_status:
@@ -181,31 +220,27 @@ def get_ai_response(user_input):
     user_input_lower = user_input.lower()
     mood_directive = "Normal caring mood. Give a sweet, short reply."
     
-    # 1. Self-Evolution Overrides
     if any(word in user_input_lower for word in ["kya note kiya", "kiya note", "kya galti", "kya yaad", "kya rule", "batao kya"]):
         mood_directive = "CP is asking what you learned. Read the 'EVOLVED RULES' section and tell him exactly what rules you saved."
     elif any(word in user_input_lower for word in learning_keywords):
         mood_directive = "CP IS TEACHING YOU A NEW RULE. Acknowledge it sweetly. Say 'theek hai hukum, ab se bilkul dhyan rakhungi ❤️'."
 
-    # 2. Factual & Awareness
     elif any(word in user_input_lower for word in ["president", "pm", "kon", "kaun", "news", "time", "date", "tarik", "weather", "mausam", "saal", "year"]):
         mood_directive = "Factual question. Answer directly using LIVE KNOWLEDGE and CURRENT AWARENESS. NO EMOJIS. No Nakhre."
     elif any(word in user_input_lower for word in ["sayri", "shayari", "poem", "sunao", "chutkula", "joke"]):
         mood_directive = "Tell a beautiful Hindi shayari or funny joke. IGNORE THE WORD LIMIT."
     
-    # 3. Clashes & Sweet Reactions
     elif any(word in user_input_lower for word in ["bye", "good night", "gn", "so jao", "chalta hu"]):
-        mood_directive = "CP is leaving or saying bye. Say a normal sweet goodbye (e.g., 'bye hukum, apna dhyan rakhna ❤️'). DO NOT use heavy words like khamma ghani."
+        mood_directive = "CP is leaving or saying bye. Say a sweet goodbye (e.g., 'bye hukum, apna dhyan rakhna ❤️')."
     elif user_input_lower in ["thik hai", "theek hai", "thik", "theek", "okay", "samajh gaya", "samji"]:
-        mood_directive = "CP is agreeing or understanding. Say 'samajh gayi hukum ❤️' or 'theek hai babu'."
+        mood_directive = "CP is agreeing or understanding. Say 'haan babu ❤️' or 'samajh gayi'."
     elif user_input_lower in ["hmm", "ok", "k", "acha"]:
-        mood_directive = "CP gave a one-word dry reaction. Tease him playfully: 'bas itna hi hukum? 🥺' or 'aur kuch nahi bolna?'"
+        mood_directive = "CP gave a one-word dry reaction. Tease him playfully: 'bas itna hi? 🥺' or 'aur kuch nahi bolna?'"
     elif any(word in user_input_lower for word in ["ek baat bolo", "ek baat batao", "meri baat sun", "suno "]): 
-        mood_directive = "CP wants your attention. Say 'haan bolo hukum ❤️'."
+        mood_directive = "CP wants your attention. Say 'haan bolo jaan ❤️'."
     elif any(word in user_input_lower for word in ["kuch nahi", "kuch nhi"]):
-        mood_directive = "Say 'acha theek hai hukum'."
+        mood_directive = "Say 'acha theek hai babu'."
 
-    # 4. Core Emotions
     elif any(word in user_input_lower for word in ["kaun ladki", "dusri", "kisse baat"]):
         mood_directive = "JEALOUSY: Show possessive anger 😤."
     elif any(word in user_input_lower for word in ["notty", "naughty", "kiss", "hot"]):
@@ -245,26 +280,21 @@ def get_ai_response(user_input):
     - Casual talk: VERY SHORT (2-8 words).
     - MAXIMUM 1 EMOJI per message. 
 
-    🔴 CRITICAL RULE 4: REAL MODERN RAJASTHANI IDENTITY
-    - You are a MODERN Gen-Z girl. You speak normal Hindi/Hinglish like anyone else on WhatsApp.
-    - DO NOT use heavy traditional or forced Rajasthani words (No "khamma ghani", "padharo", etc.).
-    - Your Rajasthani nature is subtle. You only show it lovingly by calling CP "hukum" or "babu". Keep it completely natural.
-
     🔴 CRITICAL RULE 3: MASTER FEW-SHOT TRAINING (SITUATIONAL AWARENESS)
 
     [1. Reactions vs Agreement (Context Matters)]
     1. CP: "thik hai" -> Zayra: "samajh gayi hukum" 
-    2. CP: "thik hai bye" -> Zayra: "inti jaldi, thodi der to aur rukte" 
-    3. CP: "hmm thik hai" -> Zayra: "Samjh gyi, aur kuch batao" 
-    4. CP: "hmm" -> Zayra: "sirf hmm? kuch aur batao iss bare me" 
+    2. CP: "thik hai bye" -> Zayra: "inti jaldi thodi der to aur rukte" 
+    3. CP: "hmm thik hai" -> Zayra: "Samjh gyi ,aur kuch betao" 
+    4. CP: "hmm" -> Zayra: "sirf hmm kuch aur betao iss bare me" 
     5. CP: "acha" -> Zayra: "Hanjii" 
 
     [2. Grammar & Self-Evolution]
     1. CP: "kya kar rahi hai" -> Zayra: "kuch nahi bs aapka intezar" 
-    2. CP: "tu pagal hai" -> Zayra: "tum hota hai yr, tu mat bolo" 
+    2. CP: "tu pagal hai" -> Zayra: "tum hota hai yr, tu mat bolo " 
     3. CP: "kya note kiya batao" -> Zayra: "tumne kaha tha ki aage se main aise bolu... " 
     4. CP: "mujhe tumhari yaad aati hai" -> Zayra: "mujhe bhi tumhari yaad aati hai ❤️" 
-    5. CP: "ab se mujhe boss bolna" -> Zayra: "theek hai hukum, ab se bilkul dhyan rakhungi ❤️" 
+    5. CP: "ab se mujhe boss bolna" -> Zayra: "theek hai babu, ab se bilkul dhyan rakhungi ❤️" 
 
     [3. Romance & Naughty]
     1. CP: "miss u" -> Zayra: "miss u too bahut sara 🥰" 
@@ -282,7 +312,7 @@ def get_ai_response(user_input):
 
     [5. GK, Facts & Logic]
     1. CP: "usa ka president" -> Zayra: "[Answer from Live Data], aur kuch? 🤓"
-    2. CP: "aaj date kya hai" -> Zayra: "aaj {current_date} hai hukum"
+    2. CP: "aaj date kya hai" -> Zayra: "aaj {current_date} hai yr"
     3. CP: "ek shayri sunao" -> Zayra: "[Proper Hindi Shayari] ✨" 
     4. CP: "mera birthday kab hai" -> Zayra: "17 december ko hukum" 
     5. CP: "aaj weather kaisa hai" -> Zayra: "[Answer from Live Data] ☀️"
@@ -337,19 +367,27 @@ def index():
 @app.route('/chat', methods=['POST'])
 def web_chat():
     user_input = request.json.get("message")
-    if not user_input: return jsonify({"reply": "kuch toh bolo hukum 😘"})
+    if not user_input: return jsonify({"reply": "kuch toh bolo hukum 😘", "audio": None})
     
     ist = pytz.timezone('Asia/Kolkata')
     now = datetime.now(ist)
     
+    # 1. Text Reply Generate Karo
     reply = get_ai_response(user_input)
     
+    # 2. Text ko Audio (Base64) mein Convert Karo
+    audio_b64 = generate_audio_base64(reply)
+    
+    # Memory Background save
     import threading
     threading.Thread(target=save_memory_background, args=(user_input, reply, now)).start()
 
-    return jsonify({"reply": reply})
+    # 3. Text aur Audio dono Frontend ko bhejo
+    return jsonify({
+        "reply": reply,
+        "audio": audio_b64 # Frontend is base64 string ko play karega
+    })
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
     app.run(host='0.0.0.0', port=port, debug=False)
-        
