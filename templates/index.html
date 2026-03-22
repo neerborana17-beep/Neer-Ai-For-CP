@@ -65,7 +65,7 @@
         </div>
         
         <div id="chat-box">
-            <div class="message ai-message">hey... I'm here for you? 😘</div>
+            <div class="message ai-message">hey hukum... I'm here for you! 😘</div>
             <div id="typing" class="typing-indicator">
                 <span></span><span></span><span></span>
             </div>
@@ -81,13 +81,15 @@
         const chatBox = document.getElementById('chat-box');
         const userInput = document.getElementById('user-input');
         const typingIndicator = document.getElementById('typing');
+        
+        // 🚀 MOBILE AUDIO UNLOCKER
+        const zayraVoice = new Audio();
+        let isAudioUnlocked = false;
 
         function addMessage(text, isUser) {
             const div = document.createElement('div');
             div.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
             div.textContent = text;
-            
-            // Message ko hamesha typing indicator ke upar dalna hai
             chatBox.insertBefore(div, typingIndicator);
             scrollToBottom();
         }
@@ -101,11 +103,16 @@
             const msg = userInput.value.trim();
             if(!msg) return;
             
+            // 🚀 Jese hi send dabega, mobile ka audio system ON ho jayega
+            if(!isAudioUnlocked) {
+                zayraVoice.play().catch(e => {}); // Empty play to unlock
+                isAudioUnlocked = true;
+            }
+            
             addMessage(msg, true);
             userInput.value = '';
             userInput.focus();
             
-            // Show typing animation
             typingIndicator.style.display = 'block';
             scrollToBottom();
 
@@ -117,28 +124,31 @@
                 });
                 const data = await res.json();
                 
-                // Hide typing animation
                 typingIndicator.style.display = 'none';
-                
-                // 1. Text Message dikhao
                 addMessage(data.reply, false);
                 
-                // 2. 🗣️ AUDIO PLAY LOGIC
+                // 🗣️ AUDIO PLAY LOGIC
                 if (data.audio) {
                     try {
-                        const audio = new Audio("data:audio/mpeg;base64," + data.audio);
-                        audio.play().catch(e => {
-                            console.log("Audio play blocked by browser or error:", e);
-                        });
+                        zayraVoice.src = "data:audio/mpeg;base64," + data.audio;
+                        let playPromise = zayraVoice.play();
+                        
+                        if (playPromise !== undefined) {
+                            playPromise.catch(error => {
+                                alert("Mobile ne aawaz rok di hai! Apne phone ka volume check karein.");
+                            });
+                        }
                     } catch (err) {
-                        console.error("Audio playback error:", err);
+                        alert("Audio System Error: " + err.message);
                     }
+                } else {
+                    // ⚠️ AGAR BACKEND SE AAWAZ NAHI AAYI (THE DEBUGGER)
+                    addMessage("⚠️ [System Note]: Aawaz nahi aayi! Boss, Render par 'ELEVENLABS_API_KEY' aur 'ELEVENLABS_VOICE_ID' check karo. Ya phir ElevenLabs ke free characters khatam ho gaye hain!", false);
                 }
 
             } catch (error) {
                 typingIndicator.style.display = 'none';
-                addMessage("babu, lagta hai network nakhre kar raha hai! 🙄", false);
-                console.error("Fetch Error:", error);
+                addMessage("hukum, lagta hai network nakhre kar raha hai! 🙄", false);
             }
         }
 
@@ -154,5 +164,4 @@
         }
     </script>
 </body>
-    </html>
-    
+</html>
