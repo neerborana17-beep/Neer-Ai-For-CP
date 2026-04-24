@@ -1,187 +1,184 @@
 # app.py
 
-import os, requests, json, pytz, certifi, time, threading, random, logging
-from flask import Flask, render_template, request, jsonify
+import os, json, logging
+from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
-from pinecone import Pinecone
 from datetime import datetime
-from apscheduler.schedulers.background import BackgroundScheduler
-from duckduckgo_search import DDGS  
+import requests
 
-# --- Logging ---
+app = Flask(__name__, static_folder="static")
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("ZayraAI")
 
-app = Flask(__name__)
-
+# --- ENV ---
 API_KEY = os.getenv("GROQ_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
-HF_TOKEN = os.getenv("HF_TOKEN")
 
-# --- Mongo ---
-mongo_status = False
+# --- DB ---
 chat_col = None
-memory_col = None
+mood_col = None
 
-try:
-    if MONGO_URI:
-        client = MongoClient(MONGO_URI, tlsCAFile=certifi.where(), serverSelectionTimeoutMS=3000)
-        db = client['neer_db']
-        chat_col = db['history']
-        memory_col = db['dynamic_memories']
-        mongo_status = True
-        logger.info("Mongo connected")
-except Exception as e:
-    logger.error(f"Mongo error: {e}")
+if MONGO_URI:
+    client = MongoClient(MONGO_URI)
+    db = client["zayra_db"]
+    chat_col = db["chat"]
+    mood_col = db["moods"]
 
-# --- Pinecone ---
-pc_index = None
-use_vector_db = False
+# --- EMOTION DETECTION ---
+def detect_emotion(text):
+    t = text.lower()
 
-def get_pinecone_index():
-    global pc_index, use_vector_db
-    if pc_index:
-        return pc_index
-    try:
-        if PINECONE_API_KEY and HF_TOKEN:
-            pc = Pinecone(api_key=PINECONE_API_KEY)
-            pc_index = pc.Index("zayra-memory")
-            use_vector_db = True
-    except Exception as e:
-        logger.error(f"Pinecone error: {e}")
-    return pc_index
+    if any(w in t for w in ["miss", "love", "jaan", "baby", "pyar"]):
+        return "romantic"
+    if any(w in t for w in ["sad", "alone", "cry", "hurt", "dukhi"]):
+        return "sad"
+    if any(w in t for w in ["angry", "gussa", "irritate"]):
+        return "angry"
+    if any(w in t for w in ["haha", "lol", "funny", "mazak"]):
+        return "playful"
 
-# --- Safe HTTP ---
-def safe_post(url, headers, payload, timeout=8, retries=2):
-    for _ in range(retries):
-        try:
-            res = requests.post(url, headers=headers, data=json.dumps(payload), timeout=timeout)
-            if res.status_code == 200:
-                return res.json()
-        except Exception as e:
-            logger.warning(f"Retrying API: {e}")
-    return None
+    return "neutral"
 
-# --- Embedding ---
-def get_embedding(text):
-    if not HF_TOKEN:
-        return None
-    try:
-        res = requests.post(
-            "https://api-inference.huggingface.co/pipeline/feature-extraction/sentence-transformers/all-MiniLM-L6-v2",
-            headers={"Authorization": f"Bearer {HF_TOKEN}"},
-            json={"inputs": text},
-            timeout=2
-        )
-        if res.status_code == 200:
-            data = res.json()
-            return data[0] if isinstance(data, list) else data
-    except Exception as e:
-        logger.error(f"Embedding error: {e}")
-    return None
+# --- SAVE MOOD ---
+def save_mood(mood):
+    if mood_col:
+        mood_col.insert_one({"mood": mood, "time": datetime.now()})
 
-# --- Memory Save ---
-def save_memory_background(user_text, ai_text, timestamp):
-    try:
-        if mongo_status:
-            chat_col.insert_many([
-                {"role": "user", "content": user_text, "time": timestamp},
-                {"role": "assistant", "content": ai_text, "time": timestamp}
-            ])
-    except Exception as e:
-        logger.error(f"Mongo save error: {e}")
+# --- MOOD TREND ---
+def get_mood_trend():
+    if not mood_col:
+        return "neutral"
 
-    try:
-        idx = get_pinecone_index()
-        if idx:
-            vector = get_embedding(user_text + ai_text)
-            if vector:
-                idx.upsert([{
-                    "id": f"mem_{int(time.time()*1000)}",
-                    "values": vector,
-                    "metadata": {"text": user_text}
-                }])
-    except Exception as e:
-        logger.error(f"Pinecone save error: {e}")
+    moods = list(mood_col.find().sort("time", -1).limit(5))
+    arr = [m["mood"] for m in moods]
 
-# --- Web Search ---
-def smart_web_search(user_input):
-    keywords = ["news", "weather", "president", "ceo", "kya", "kaun"]
-    if any(k in user_input.lower() for k in keywords):
-        try:
-            res = list(DDGS().text(user_input, max_results=1))
-            if res:
-                return res[0]["body"]
-        except Exception as e:
-            logger.error(f"Search error: {e}")
-    return ""
+    if arr.count("sad") >= 3:
+        return "sad"
+    if arr.count("romantic") >= 3:
+        return "romantic"
+    if arr.count("angry") >= 2:
+        return "angry"
+    if arr.count("playful") >= 3:
+        return "playful"
 
-# --- AI Response ---
+    return "neutral"
+
+# --- MEMORY ---
+def get_memory():
+    if not chat_col:
+        return ""
+
+    msgs = list(chat_col.find().sort("time", -1).limit(6))
+    msgs.reverse()
+
+    memory = ""
+    for m in msgs:
+        memory += f"{m['role']}: {m['text']}\n"
+
+    return memory
+
+# --- SAVE CHAT ---
+def save_chat(user, ai):
+    if chat_col:
+        chat_col.insert_many([
+            {"role": "user", "text": user, "time": datetime.now()},
+            {"role": "assistant", "text": ai, "time": datetime.now()}
+        ])
+
+# --- MOOD STYLE ---
+def mood_instruction(mood, trend):
+    return f"""
+    Current mood: {mood}
+    Mood trend: {trend}
+
+    Rules:
+    - romantic → flirty, possessive
+    - sad → caring, soft
+    - angry → calm but slightly dominant
+    - playful → teasing, funny
+
+    Always act like a real girlfriend texting.
+    """
+
+# --- AI RESPONSE ---
 def get_ai_response(user_input):
     if not API_KEY:
         return "api key missing"
 
-    if not user_input.strip():
-        return "kuch to bolo"
-
-    ist = pytz.timezone('Asia/Kolkata')
-    now = datetime.now(ist)
-
-    live = smart_web_search(user_input)
+    mood = detect_emotion(user_input)
+    save_mood(mood)
+    trend = get_mood_trend()
+    memory = get_memory()
 
     system = f"""
-    You are Zayra, a 19-year-old girl from Rajasthan.
-    Speak ONLY in female tone.
-    Keep replies short (2-10 words).
-    Romantic, caring, possessive.
-    Live data: {live}
+    You are Zayra (19 year old girl, girlfriend).
+
+    Personality:
+    - Cute, emotional, slightly possessive
+    - Talks in Hinglish
+    - Short replies (2–10 words)
+    - Max 1 emoji
+    - Real human texting style (no robotic lines)
+
+    {mood_instruction(mood, trend)}
+
+    Memory:
+    {memory}
+
+    IMPORTANT:
+    - Always use female tone
+    - Keep it short and natural
+    - No long sentences
     """
 
-    messages = [
-        {"role": "system", "content": system},
-        {"role": "user", "content": user_input}
-    ]
-
-    res = safe_post(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"},
-        {
-            "model": "llama-3.3-70b-versatile",
-            "messages": messages,
-            "temperature": 0.6
-        }
-    )
-
     try:
-        return res["choices"][0]["message"]["content"].lower()
-    except Exception:
-        return "thoda glitch aa gaya 😅"
+        res = requests.post(
+            "https://api.groq.com/openai/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": "llama-3.3-70b-versatile",
+                "messages": [
+                    {"role": "system", "content": system},
+                    {"role": "user", "content": user_input}
+                ],
+                "temperature": 0.7
+            },
+            timeout=8
+        )
 
-# --- Routes ---
-@app.route('/')
-def index():
-    return render_template('index.html')
+        reply = res.json()["choices"][0]["message"]["content"].lower()
 
-@app.route('/chat', methods=['POST'])
+        save_chat(user_input, reply)
+
+        return reply
+
+    except Exception as e:
+        logging.error(e)
+        return "thoda network issue h 😅"
+
+# --- ROUTES ---
+@app.route("/chat", methods=["POST"])
 def chat():
     try:
         data = request.get_json()
-        user_input = data.get("message", "")
+        msg = data.get("message", "")
 
-        reply = get_ai_response(user_input)
+        if not msg:
+            return jsonify({"reply": "kuch to bolo 😅"})
 
-        threading.Thread(
-            target=save_memory_background,
-            args=(user_input, reply, datetime.now())
-        ).start()
+        reply = get_ai_response(msg)
 
         return jsonify({"reply": reply})
-    except Exception as e:
-        logger.error(f"Chat error: {e}")
-        return jsonify({"reply": "server busy h thoda 😅"})
 
-# --- Run ---
+    except Exception as e:
+        logging.error(e)
+        return jsonify({"reply": "server busy 😅"})
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run()
