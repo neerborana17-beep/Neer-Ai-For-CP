@@ -1,52 +1,34 @@
-import os, logging, requests, asyncio, hashlib, random
+import os, logging, requests, hashlib
 from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
-import edge_tts
 
 app = Flask(__name__, static_folder="static")
 logging.basicConfig(level=logging.INFO)
 
-API_KEY = os.getenv("GROQ_API_KEY")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
 chat_col = None
 
-# --- Mongo ---
 if MONGO_URI:
     client = MongoClient(MONGO_URI)
     db = client["zayra_db"]
     chat_col = db["chat"]
 
-# --- Emotion ---
-def detect_emotion(text):
-    t = text.lower()
-
-    if any(w in t for w in ["miss", "love", "jaan", "pyar"]):
-        return "romantic"
-    if any(w in t for w in ["sad", "alone", "cry"]):
-        return "sad"
-    if any(w in t for w in ["angry", "gussa"]):
-        return "angry"
-    if any(w in t for w in ["haha", "lol"]):
-        return "playful"
-
-    return "neutral"
-
-# --- AI ---
+# --- AI RESPONSE ---
 def get_ai_response(user_input):
-    mood = detect_emotion(user_input)
-
     try:
         res = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
-                "Authorization": f"Bearer {API_KEY}",
+                "Authorization": f"Bearer {GROQ_API_KEY}",
                 "Content-Type": "application/json"
             },
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": f"you are cute girlfriend, mood {mood}, short reply, hinglish"},
+                    {"role": "system", "content": "you are cute girlfriend, short reply, hinglish"},
                     {"role": "user", "content": user_input}
                 ]
             },
@@ -61,7 +43,7 @@ def get_ai_response(user_input):
             if chat_col is not None:
                 chat_col.insert_one({"user": user_input, "ai": reply})
 
-            return reply.lower()
+            return reply
 
         return "api error 😅"
 
@@ -69,52 +51,7 @@ def get_ai_response(user_input):
         logging.error(e)
         return "server busy 😅"
 
-# --- HUMAN VOICE ENGINE ---
-VOICE = "en-US-AriaNeural"
-
-async def generate_voice(text, path):
-    clean = text.strip().replace("\n", " ")
-
-    # 🔥 breathing simulation
-    breaths = ["hmm...", "uh...", "hmm..", ""]
-    prefix = random.choice(breaths)
-
-    clean = prefix + " " + clean
-
-    # 🔥 pauses
-    clean = clean.replace(".", "... ")
-    clean = clean.replace(",", ", ")
-    clean = clean.replace("?", "... ")
-
-    # 🔥 emotion tone
-    if "love" in clean or "miss" in clean:
-        rate = "0.88"
-        pitch = "+5%"
-    elif "sad" in clean:
-        rate = "0.80"
-        pitch = "-2%"
-    elif "angry" in clean:
-        rate = "1.0"
-        pitch = "+2%"
-    else:
-        rate = "0.92"
-        pitch = "+3%"
-
-    ssml = f"""
-    <speak>
-        <voice name="{VOICE}">
-            <prosody rate="{rate}" pitch="{pitch}">
-                {clean}
-                <break time="400ms"/>
-            </prosody>
-        </voice>
-    </speak>
-    """
-
-    tts = edge_tts.Communicate(ssml, voice=VOICE)
-    await tts.save(path)
-
-# --- SPEAK ---
+# --- ELEVENLABS TTS ---
 @app.route("/speak", methods=["POST"])
 def speak():
     try:
@@ -128,10 +65,30 @@ def speak():
         path = f"static/{filename}"
 
         if not os.path.exists(path):
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
-            loop.run_until_complete(generate_voice(text, path))
-            loop.close()
+
+            url = "https://api.elevenlabs.io/v1/text-to-speech/EXAVITQu4vr4xnSDxMaL"
+
+            headers = {
+                "xi-api-key": ELEVEN_API_KEY,
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "text": text,
+                "model_id": "eleven_multilingual_v2",
+                "voice_settings": {
+                    "stability": 0.4,
+                    "similarity_boost": 0.8
+                }
+            }
+
+            response = requests.post(url, headers=headers, json=payload)
+
+            if response.status_code == 200:
+                with open(path, "wb") as f:
+                    f.write(response.content)
+            else:
+                return jsonify({"error": "tts failed"}), 500
 
         return jsonify({"audio": path})
 
