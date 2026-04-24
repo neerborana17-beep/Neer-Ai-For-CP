@@ -16,7 +16,6 @@ input { flex:1; padding:10px; border-radius:20px; border:none; }
 button { width:50px; margin-left:5px; }
 
 #mic { background:#00a884; color:#fff; border-radius:50%; }
-#mic.active { background:red; }
 </style>
 </head>
 
@@ -35,10 +34,7 @@ const chat = document.getElementById("chat");
 const input = document.getElementById("text");
 
 let currentAudio = null;
-let recognition = null;
-let listening = false;
 
-// --- ADD MESSAGE ---
 function add(text, cls){
     const d=document.createElement("div");
     d.className="msg "+cls;
@@ -49,7 +45,6 @@ function add(text, cls){
     if(cls==="ai") playVoice(text);
 }
 
-// --- SEND ---
 async function send(){
     const msg=input.value.trim();
     if(!msg) return;
@@ -57,27 +52,20 @@ async function send(){
     add(msg,"user");
     input.value="";
 
-    try{
-        const res=await fetch("/chat",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({message:msg})
-        });
+    const res=await fetch("/chat",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({message:msg})
+    });
 
-        const data=await res.json();
-        add(data.reply,"ai");
-
-    }catch{
-        add("network issue 😅","ai");
-    }
+    const data=await res.json();
+    add(data.reply,"ai");
 }
 
-// --- VOICE PLAY ---
 async function playVoice(text){
     try{
         if(currentAudio){
             currentAudio.pause();
-            currentAudio = null;
         }
 
         const res=await fetch("/speak",{
@@ -90,60 +78,15 @@ async function playVoice(text){
 
         if(data.audio){
             currentAudio = new Audio(data.audio);
-
-            await currentAudio.play().catch(()=>{
-                console.log("tap required");
+            currentAudio.play().catch(()=>{
+                console.log("tap screen once");
             });
         }
 
     }catch(e){
-        console.log("voice error",e);
+        console.log(e);
     }
 }
-
-// --- MIC INIT ---
-function initMic(){
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if(!SR) return;
-
-    recognition = new SR();
-    recognition.lang = "en-IN";
-    recognition.continuous = false;
-
-    recognition.onresult = (e)=>{
-        input.value = e.results[0][0].transcript;
-        send();
-    };
-
-    recognition.onend = ()=>{
-        listening = false;
-        document.getElementById("mic").classList.remove("active");
-    };
-
-    recognition.onerror = ()=>{
-        listening = false;
-    };
-}
-
-// --- MIC TOGGLE ---
-function toggleMic(){
-    if(!recognition) return;
-
-    const btn = document.getElementById("mic");
-
-    if(!listening){
-        recognition.start();
-        listening = true;
-        btn.classList.add("active");
-    }else{
-        recognition.stop();
-        listening = false;
-        btn.classList.remove("active");
-    }
-}
-
-document.getElementById("mic").onclick = toggleMic;
-window.onload = initMic;
 </script>
 
 </body>
