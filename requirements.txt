@@ -1,4 +1,4 @@
 Flask
-pymongo
 requests
 gunicorn
+edge-tts
