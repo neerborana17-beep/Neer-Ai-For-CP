@@ -1,35 +1,36 @@
-import os, requests, asyncio, hashlib
+import os, json, requests, asyncio, hashlib
 from flask import Flask, request, jsonify, render_template
 import edge_tts
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
 API_KEY = os.getenv("GROQ_API_KEY")
+MEMORY_FILE = "memory.json"
 
-# 🧠 MEMORY STORE (simple session)
-conversation_memory = []
+# safe load memory
+try:
+    with open(MEMORY_FILE, "r") as f:
+        memory = json.load(f)
+except:
+    memory = []
 
-# --- AI ---
+def save_memory():
+    with open(MEMORY_FILE, "w") as f:
+        json.dump(memory[-20:], f)
+
 def get_ai_response(user_input):
-    global conversation_memory
+    global memory
+
+    memory.append({"role": "user", "content": user_input})
+
+    messages = [
+        {
+            "role": "system",
+            "content": "You are Zayra, a real humanoid girl. Soft emotional Hinglish, natural, short replies."
+        }
+    ] + memory[-10:]
 
     try:
-        conversation_memory.append({"role": "user", "content": user_input})
-
-        # keep last 6 messages
-        conversation_memory = conversation_memory[-6:]
-
-        messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You are Zayra, a real humanoid girl. "
-                    "Soft emotional Hinglish. Natural, caring, slightly flirty. "
-                    "Short replies. Feels real."
-                )
-            }
-        ] + conversation_memory
-
         res = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
@@ -45,34 +46,22 @@ def get_ai_response(user_input):
 
         reply = res.json()["choices"][0]["message"]["content"]
 
-        conversation_memory.append({"role": "assistant", "content": reply})
-        conversation_memory = conversation_memory[-6:]
+        memory.append({"role": "assistant", "content": reply})
+        save_memory()
 
         return reply
 
     except Exception as e:
-        print("AI Error:", e)
+        print(e)
         return "hmm... phir se bolo na ❤️"
 
-# --- TTS ---
 async def generate_voice(text, path):
-    ssml = f"""
-    <speak>
-        <voice name="en-US-AriaNeural">
-            <prosody rate="0.92" pitch="+4%">
-                {text}
-            </prosody>
-        </voice>
-    </speak>
-    """
-
-    tts = edge_tts.Communicate(ssml, voice="en-US-AriaNeural")
+    tts = edge_tts.Communicate(text, voice="en-US-AriaNeural")
     await tts.save(path)
 
 @app.route("/speak", methods=["POST"])
 def speak():
-    data = request.get_json()
-    text = data.get("text", "")
+    text = request.json.get("text", "")
 
     filename = "voice_" + hashlib.md5(text.encode()).hexdigest() + ".mp3"
     path = os.path.join("static", filename)
@@ -83,13 +72,12 @@ def speak():
         loop.run_until_complete(generate_voice(text, path))
         loop.close()
 
-    return jsonify({"audio": "/" + path})
+    return jsonify({"audio": path})  # FIXED
 
 @app.route("/chat", methods=["POST"])
 def chat():
     msg = request.json.get("message", "")
-    reply = get_ai_response(msg)
-    return jsonify({"reply": reply})
+    return jsonify({"reply": get_ai_response(msg)})
 
 @app.route("/")
 def index():
