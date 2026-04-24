@@ -3,6 +3,7 @@ pymongo
 pytz
 certifi
 requests
+pinecone-client
 gunicorn
 apscheduler
 duckduckgo-search
