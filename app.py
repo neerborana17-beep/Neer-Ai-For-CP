@@ -1,136 +1,58 @@
-# app.py
-
-import os, json, logging
+import os, logging, requests
 from flask import Flask, request, jsonify, render_template
-from pymongo import MongoClient
 from datetime import datetime
-import requests
 
 app = Flask(__name__, static_folder="static")
 logging.basicConfig(level=logging.INFO)
 
-# --- ENV ---
 API_KEY = os.getenv("GROQ_API_KEY")
-MONGO_URI = os.getenv("MONGO_URI")
 
-# --- DB ---
-chat_col = None
-mood_col = None
-
-if MONGO_URI:
-    client = MongoClient(MONGO_URI)
-    db = client["zayra_db"]
-    chat_col = db["chat"]
-    mood_col = db["moods"]
-
-# --- EMOTION DETECTION ---
+# --- EMOTION ---
 def detect_emotion(text):
     t = text.lower()
 
-    if any(w in t for w in ["miss", "love", "jaan", "baby", "pyar"]):
+    if any(w in t for w in ["miss", "love", "jaan", "pyar"]):
         return "romantic"
-    if any(w in t for w in ["sad", "alone", "cry", "hurt", "dukhi"]):
+    if any(w in t for w in ["sad", "alone", "cry"]):
         return "sad"
-    if any(w in t for w in ["angry", "gussa", "irritate"]):
+    if any(w in t for w in ["angry", "gussa"]):
         return "angry"
-    if any(w in t for w in ["haha", "lol", "funny", "mazak"]):
+    if any(w in t for w in ["haha", "lol"]):
         return "playful"
 
     return "neutral"
-
-# --- SAVE MOOD ---
-def save_mood(mood):
-    if mood_col:
-        mood_col.insert_one({"mood": mood, "time": datetime.now()})
-
-# --- MOOD TREND ---
-def get_mood_trend():
-    if not mood_col:
-        return "neutral"
-
-    moods = list(mood_col.find().sort("time", -1).limit(5))
-    arr = [m["mood"] for m in moods]
-
-    if arr.count("sad") >= 3:
-        return "sad"
-    if arr.count("romantic") >= 3:
-        return "romantic"
-    if arr.count("angry") >= 2:
-        return "angry"
-    if arr.count("playful") >= 3:
-        return "playful"
-
-    return "neutral"
-
-# --- MEMORY ---
-def get_memory():
-    if not chat_col:
-        return ""
-
-    msgs = list(chat_col.find().sort("time", -1).limit(6))
-    msgs.reverse()
-
-    memory = ""
-    for m in msgs:
-        memory += f"{m['role']}: {m['text']}\n"
-
-    return memory
-
-# --- SAVE CHAT ---
-def save_chat(user, ai):
-    if chat_col:
-        chat_col.insert_many([
-            {"role": "user", "text": user, "time": datetime.now()},
-            {"role": "assistant", "text": ai, "time": datetime.now()}
-        ])
-
-# --- MOOD STYLE ---
-def mood_instruction(mood, trend):
-    return f"""
-    Current mood: {mood}
-    Mood trend: {trend}
-
-    Rules:
-    - romantic → flirty, possessive
-    - sad → caring, soft
-    - angry → calm but slightly dominant
-    - playful → teasing, funny
-
-    Always act like a real girlfriend texting.
-    """
 
 # --- AI RESPONSE ---
 def get_ai_response(user_input):
+    print("\n===== NEW REQUEST =====")
+    print("User Input:", user_input)
+
+    # 🔥 Check API key
     if not API_KEY:
-        return "api key missing"
+        print("❌ API KEY MISSING")
+        return "api key missing 😅"
+
+    print("✅ API KEY FOUND")
 
     mood = detect_emotion(user_input)
-    save_mood(mood)
-    trend = get_mood_trend()
-    memory = get_memory()
+    print("Detected Mood:", mood)
 
     system = f"""
-    You are Zayra (19 year old girl, girlfriend).
+    You are Zayra (girlfriend).
+    Mood: {mood}
 
-    Personality:
-    - Cute, emotional, slightly possessive
-    - Talks in Hinglish
-    - Short replies (2–10 words)
-    - Max 1 emoji
-    - Real human texting style (no robotic lines)
+    Style:
+    - short replies (2-10 words)
+    - Hinglish
+    - 1 emoji max
+    - real girl texting
 
-    {mood_instruction(mood, trend)}
-
-    Memory:
-    {memory}
-
-    IMPORTANT:
-    - Always use female tone
-    - Keep it short and natural
-    - No long sentences
+    Always female tone.
     """
 
     try:
+        print("📡 Sending request to GROQ...")
+
         res = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
             headers={
@@ -145,25 +67,35 @@ def get_ai_response(user_input):
                 ],
                 "temperature": 0.7
             },
-            timeout=8
+            timeout=15
         )
 
-        reply = res.json()["choices"][0]["message"]["content"].lower()
+        print("🔁 Status Code:", res.status_code)
 
-        save_chat(user_input, reply)
+        data = res.json()
+        print("📦 Response JSON:", data)
 
-        return reply
+        # 🔥 Safe parsing
+        if "choices" in data:
+            reply = data["choices"][0]["message"]["content"]
+            print("✅ AI Reply:", reply)
+            return reply.lower()
+
+        else:
+            print("❌ API STRUCTURE ERROR")
+            return "api response error 😅"
 
     except Exception as e:
+        print("❌ EXCEPTION:", str(e))
         logging.error(e)
-        return "thoda network issue h 😅"
+        return f"error: {str(e)}"
 
-# --- ROUTES ---
+# --- ROUTE ---
 @app.route("/chat", methods=["POST"])
 def chat():
     try:
         data = request.get_json()
-        msg = data.get("message", "")
+        msg = data.get("message", "").strip()
 
         if not msg:
             return jsonify({"reply": "kuch to bolo 😅"})
@@ -173,8 +105,8 @@ def chat():
         return jsonify({"reply": reply})
 
     except Exception as e:
-        logging.error(e)
-        return jsonify({"reply": "server busy 😅"})
+        print("❌ CHAT ROUTE ERROR:", str(e))
+        return jsonify({"reply": str(e)})
 
 @app.route("/")
 def index():
