@@ -1,11 +1,4 @@
 Flask
 pymongo
-pytz
-certifi
 requests
-pinecone-client
 gunicorn
-apscheduler
-duckduckgo-search
-edge-tts
-aiohttp
