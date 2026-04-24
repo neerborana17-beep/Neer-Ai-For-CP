@@ -1,214 +1,150 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Zayra AI | Powered by CP</title>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
-    <style>
-        /* WhatsApp Theme Colors */
-        :root { 
-            --bg-color: #EFEAE2; /* Light WhatsApp background */
-            --header-bg: #008069; /* WhatsApp Green Header */
-            --zayra-msg-bg: #dcf8c6; /* Light green for Zayra (As requested) */
-            --user-msg-bg: #ffffff; /* White for User (As requested) */
-            --text-color: #111b21; /* Dark text for readability */
-        }
-        
-        body { 
-            font-family: 'Outfit', sans-serif; 
-            background: var(--bg-color); 
-            margin: 0; padding: 0; 
-            display: flex; justify-content: center; 
-            position: fixed; top: 0; bottom: 0; left: 0; right: 0; 
-            overflow: hidden; 
-        }
-        
-        /* Optional: WhatsApp chat pattern overlay */
-        .chat-container { 
-            width: 100%; max-width: 450px; height: 100%; 
-            background-color: var(--bg-color);
-            background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); /* Light doodle background */
-            background-blend-mode: multiply;
-            display: flex; flex-direction: column; overflow: hidden; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.1); 
-        }
-        
-        .header { 
-            flex-shrink: 0; padding: 15px 22px; 
-            display: flex; justify-content: space-between; align-items: center; 
-            background: var(--header-bg); z-index: 10; 
-            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
-        }
-        .header-left { display: flex; flex-direction: column; }
-        .powered-by { font-size: 0.6rem; letter-spacing: 1px; color: rgba(255, 255, 255, 0.8); text-transform: uppercase; margin-bottom: 2px; }
-        .header h1 { font-size: 1.4rem; margin: 0; color: white; font-weight: 600; }
-        
-        .status-wrapper { display: flex; align-items: center; margin-top: 3px; }
-        .status-dot { height: 7px; width: 7px; background-color: #4ade80; border-radius: 50%; display: inline-block; margin-right: 6px; box-shadow: 0 0 5px #4ade80; animation: pulse 2s infinite; }
-        .online-text { font-size: 0.75rem; color: rgba(255, 255, 255, 0.9); font-weight: 400; }
-        
-        .reset-btn { background: none; border: none; font-size: 1.3rem; cursor: pointer; opacity: 0.8; transition: 0.3s; padding: 5px; color: white; }
-        .reset-btn:hover { opacity: 1; transform: scale(1.1); }
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zayra AI</title>
 
-        #chat-box { flex: 1; padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
-        
-        .message { 
-            max-width: 75%; padding: 10px 14px; 
-            border-radius: 8px; font-size: 0.95rem; 
-            line-height: 1.4; animation: fadeIn 0.3s ease; 
-            word-wrap: break-word; color: var(--text-color);
-            position: relative;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        
-        /* User Message (White as requested) */
-        .user-message { 
-            align-self: flex-end; 
-            background: var(--user-msg-bg); 
-            border-top-right-radius: 0; 
-        }
-        
-        /* Zayra Message (Green as requested) */
-        .ai-message { 
-            align-self: flex-start; 
-            background: var(--zayra-msg-bg); 
-            border-top-left-radius: 0; 
-        }
-        
-        .typing-indicator { 
-            display: none; align-self: flex-start; 
-            background: var(--zayra-msg-bg); 
-            border-top-left-radius: 0; padding: 12px 16px; 
-            border-radius: 8px; width: fit-content; margin-top: auto; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #008069; border-radius: 50%; margin: 0 2px; animation: bounce 1.4s infinite ease-in-out both; }
-        .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
-        .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
-        
-        .input-area { 
-            flex-shrink: 0; padding: 10px; 
-            display: flex; gap: 8px; 
-            background: #f0f2f5; 
-        }
-        
-        input { 
-            flex: 1; background: #ffffff; 
-            border: none; padding: 12px 18px; 
-            border-radius: 24px; color: var(--text-color); 
-            outline: none; font-size: 1rem; 
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        input::placeholder { color: #8696a0; }
-        
-        button#send-btn { 
-            background: #00a884; border: none; 
-            height: 44px; width: 44px; 
-            border-radius: 50%; font-weight: 600; 
-            cursor: pointer; color: white; 
-            transition: 0.2s; font-size: 0;
-            display: flex; justify-content: center; align-items: center;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
-        }
-        /* Send icon via CSS */
-        button#send-btn::after {
-            content: "➤"; font-size: 1.2rem; margin-left: 2px;
-        }
-        button#send-btn:active { transform: scale(0.95); }
+<style>
+body { font-family:sans-serif; margin:0; }
+#chat { height:80vh; overflow:auto; padding:10px; }
+.msg { margin:6px; padding:10px; border-radius:10px; max-width:75%; }
+.user { background:#fff; margin-left:auto; }
+.ai { background:#dcf8c6; }
 
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes bounce { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+#inputArea { display:flex; padding:10px; }
+input { flex:1; padding:10px; border-radius:20px; border:none; }
+button { width:50px; margin-left:5px; }
 
-        #chat-box::-webkit-scrollbar { width: 5px; }
-        #chat-box::-webkit-scrollbar-thumb { background: #cccccc; border-radius: 10px; }
-    </style>
+#mic { background:#00a884; color:#fff; border-radius:50%; }
+#mic.active { background:red; }
+</style>
 </head>
+
 <body>
-    <div class="chat-container">
-        <div class="header">
-            <div class="header-left">
-                <div class="powered-by">POWERED BY CP</div>
-                <h1>Zayra</h1>
-                <div class="status-wrapper">
-                    <span class="status-dot"></span>
-                    <span class="online-text">online</span>
-                </div>
-            </div>
-            <button class="reset-btn" onclick="clearMemory()" title="Clear Chat History">🗑️</button>
-        </div>
-        
-        <div id="chat-box">
-            <div class="message ai-message">hii... I'm here for you Hukum ✨</div>
-            <div id="typing" class="typing-indicator">
-                <span></span><span></span><span></span>
-            </div>
-        </div>
-        
-        <form class="input-area" onsubmit="sendMessage(event)" autocomplete="off">
-            <input type="text" id="user-input" name="hidden_chat" autocomplete="new-password" placeholder="Message" required>
-            <button type="submit" id="send-btn">Send</button>
-        </form>
-    </div>
 
-    <script>
-        const chatBox = document.getElementById('chat-box');
-        const userInput = document.getElementById('user-input');
-        const typingIndicator = document.getElementById('typing');
+<div id="chat"></div>
 
-        function addMessage(text, isUser) {
-            const div = document.createElement('div');
-            div.className = `message ${isUser ? 'user-message' : 'ai-message'}`;
-            div.textContent = text;
-            
-            chatBox.insertBefore(div, typingIndicator);
-            scrollToBottom();
+<div id="inputArea">
+<input id="text" placeholder="Message">
+<button onclick="send()">➤</button>
+<button id="mic">🎤</button>
+</div>
+
+<script>
+const chat = document.getElementById("chat");
+const input = document.getElementById("text");
+
+let currentAudio = null;
+let recognition = null;
+let listening = false;
+
+// --- ADD MESSAGE ---
+function add(text, cls){
+    const d=document.createElement("div");
+    d.className="msg "+cls;
+    d.innerText=text;
+    chat.appendChild(d);
+    chat.scrollTop=chat.scrollHeight;
+
+    if(cls==="ai") playVoice(text);
+}
+
+// --- SEND ---
+async function send(){
+    const msg=input.value.trim();
+    if(!msg) return;
+
+    add(msg,"user");
+    input.value="";
+
+    try{
+        const res=await fetch("/chat",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({message:msg})
+        });
+
+        const data=await res.json();
+        add(data.reply,"ai");
+
+    }catch{
+        add("network issue 😅","ai");
+    }
+}
+
+// --- VOICE PLAY ---
+async function playVoice(text){
+    try{
+        if(currentAudio){
+            currentAudio.pause();
+            currentAudio = null;
         }
 
-        function scrollToBottom() {
-            setTimeout(() => chatBox.scrollTop = chatBox.scrollHeight, 50);
+        const res=await fetch("/speak",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({text})
+        });
+
+        const data=await res.json();
+
+        if(data.audio){
+            currentAudio = new Audio(data.audio);
+
+            await currentAudio.play().catch(()=>{
+                console.log("tap required");
+            });
         }
 
-        async function sendMessage(event) {
-            event.preventDefault(); 
-            const msg = userInput.value.trim();
-            if(!msg) return;
-            
-            addMessage(msg, true);
-            userInput.value = '';
-            userInput.focus();
-            
-            typingIndicator.style.display = 'block';
-            scrollToBottom();
+    }catch(e){
+        console.log("voice error",e);
+    }
+}
 
-            try {
-                const res = await fetch('/chat', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({message: msg})
-                });
-                const data = await res.json();
-                
-                typingIndicator.style.display = 'none';
-                addMessage(data.reply, false);
-            } catch {
-                typingIndicator.style.display = 'none';
-                addMessage("yaar lagta hai network nakhre kar raha hai! 🙄", false);
-            }
-        }
+// --- MIC INIT ---
+function initMic(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR) return;
 
-        async function clearMemory() {
-            if(confirm("Zayra ki saari purani yaadein mita doon?")) {
-                const res = await fetch('/delete_history_secret_99', {method: 'POST'});
-                const data = await res.json();
-                if(data.status === 'success') { 
-                    alert(data.message); 
-                    location.reload(); 
-                }
-            }
-        }
-    </script>
+    recognition = new SR();
+    recognition.lang = "en-IN";
+    recognition.continuous = false;
+
+    recognition.onresult = (e)=>{
+        input.value = e.results[0][0].transcript;
+        send();
+    };
+
+    recognition.onend = ()=>{
+        listening = false;
+        document.getElementById("mic").classList.remove("active");
+    };
+
+    recognition.onerror = ()=>{
+        listening = false;
+    };
+}
+
+// --- MIC TOGGLE ---
+function toggleMic(){
+    if(!recognition) return;
+
+    const btn = document.getElementById("mic");
+
+    if(!listening){
+        recognition.start();
+        listening = true;
+        btn.classList.add("active");
+    }else{
+        recognition.stop();
+        listening = false;
+        btn.classList.remove("active");
+    }
+}
+
+document.getElementById("mic").onclick = toggleMic;
+window.onload = initMic;
+</script>
+
 </body>
-                </html>
-    
+</html>
