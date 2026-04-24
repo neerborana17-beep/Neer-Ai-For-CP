@@ -1,4 +1,4 @@
-import os, logging, requests, asyncio, hashlib
+import os, logging, requests, asyncio, hashlib, random
 from flask import Flask, request, jsonify, render_template
 from pymongo import MongoClient
 import edge_tts
@@ -11,7 +11,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 chat_col = None
 
-# --- Mongo Fix ---
+# --- Mongo ---
 if MONGO_URI:
     client = MongoClient(MONGO_URI)
     db = client["zayra_db"]
@@ -20,12 +20,16 @@ if MONGO_URI:
 # --- Emotion ---
 def detect_emotion(text):
     t = text.lower()
-    if "miss" in t or "love" in t:
+
+    if any(w in t for w in ["miss", "love", "jaan", "pyar"]):
         return "romantic"
-    if "sad" in t:
+    if any(w in t for w in ["sad", "alone", "cry"]):
         return "sad"
-    if "angry" in t:
+    if any(w in t for w in ["angry", "gussa"]):
         return "angry"
+    if any(w in t for w in ["haha", "lol"]):
+        return "playful"
+
     return "neutral"
 
 # --- AI ---
@@ -42,7 +46,7 @@ def get_ai_response(user_input):
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": f"you are girlfriend, mood {mood}, short reply"},
+                    {"role": "system", "content": f"you are cute girlfriend, mood {mood}, short reply, hinglish"},
                     {"role": "user", "content": user_input}
                 ]
             },
@@ -54,7 +58,6 @@ def get_ai_response(user_input):
         if "choices" in data:
             reply = data["choices"][0]["message"]["content"]
 
-            # ✅ Mongo safe fix
             if chat_col is not None:
                 chat_col.insert_one({"user": user_input, "ai": reply})
 
@@ -66,13 +69,52 @@ def get_ai_response(user_input):
         logging.error(e)
         return "server busy 😅"
 
-# --- EDGE TTS ---
-VOICE = "en-US-JennyNeural"
+# --- HUMAN VOICE ENGINE ---
+VOICE = "en-US-AriaNeural"
 
 async def generate_voice(text, path):
-    tts = edge_tts.Communicate(text=text, voice=VOICE)
+    clean = text.strip().replace("\n", " ")
+
+    # 🔥 breathing simulation
+    breaths = ["hmm...", "uh...", "hmm..", ""]
+    prefix = random.choice(breaths)
+
+    clean = prefix + " " + clean
+
+    # 🔥 pauses
+    clean = clean.replace(".", "... ")
+    clean = clean.replace(",", ", ")
+    clean = clean.replace("?", "... ")
+
+    # 🔥 emotion tone
+    if "love" in clean or "miss" in clean:
+        rate = "0.88"
+        pitch = "+5%"
+    elif "sad" in clean:
+        rate = "0.80"
+        pitch = "-2%"
+    elif "angry" in clean:
+        rate = "1.0"
+        pitch = "+2%"
+    else:
+        rate = "0.92"
+        pitch = "+3%"
+
+    ssml = f"""
+    <speak>
+        <voice name="{VOICE}">
+            <prosody rate="{rate}" pitch="{pitch}">
+                {clean}
+                <break time="400ms"/>
+            </prosody>
+        </voice>
+    </speak>
+    """
+
+    tts = edge_tts.Communicate(ssml, voice=VOICE)
     await tts.save(path)
 
+# --- SPEAK ---
 @app.route("/speak", methods=["POST"])
 def speak():
     try:
