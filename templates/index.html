@@ -1,7 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Zayra AI</title>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/examples/js/loaders/GLTFLoader.js"></script>
+
+<style>
+body{margin:0;background:black;overflow:hidden;}
+#mic{
+    position:absolute;
+    bottom:30px;
+    left:50%;
+    transform:translateX(-50%);
+    width:70px;height:70px;border-radius:50%;
+    background:#00a884;border:none;font-size:30px;color:white;
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="avatar"></canvas>
+<button id="mic">🎤</button>
+
 <script>
+const canvas = document.getElementById("avatar");
+const mic = document.getElementById("mic");
+
 let scene = new THREE.Scene();
 let camera = new THREE.PerspectiveCamera(35, innerWidth/innerHeight,0.1,1000);
-let renderer = new THREE.WebGLRenderer({canvas:avatar, alpha:true});
+let renderer = new THREE.WebGLRenderer({canvas:canvas, alpha:true});
 renderer.setSize(innerWidth, innerHeight);
 
 let light = new THREE.HemisphereLight(0xffffff,0x444444);
@@ -9,58 +39,56 @@ scene.add(light);
 
 camera.position.set(0,1.5,3);
 
-let avatar, mixer;
+let avatar=null, mixer=null;
 let clock = new THREE.Clock();
 
+// LOAD MODEL (OPTIONAL)
 const loader = new THREE.GLTFLoader();
 loader.load("/static/avatar.glb",(gltf)=>{
     avatar = gltf.scene;
     scene.add(avatar);
 
-    mixer = new THREE.AnimationMixer(avatar);
+    if(gltf.animations && gltf.animations.length){
+        mixer = new THREE.AnimationMixer(avatar);
+        gltf.animations.forEach(clip=>{
+            mixer.clipAction(clip).play();
+        });
+    }
+}, undefined, ()=>{console.log("No avatar, voice only mode");});
 
-    // play all animations (hands, idle)
-    gltf.animations.forEach(clip=>{
-        mixer.clipAction(clip).play();
-    });
-});
-
-// 🎬 LOOP
+// LOOP
 function animate(){
     requestAnimationFrame(animate);
 
     let delta = clock.getDelta();
     if(mixer) mixer.update(delta);
 
-    blink();
-    eyeMove();
+    if(avatar){
+        avatar.rotation.y += (Math.random()-0.5)*0.002;
+        blink();
+    }
 
     renderer.render(scene,camera);
 }
 animate();
 
-// 👁️ BLINK
+// BLINK
 let blinkT=0;
 function blink(){
-    if(!avatar) return;
     blinkT+=0.05;
-    if(blinkT>3){
+    if(blinkT>3 && avatar){
         avatar.scale.y=0.96;
     }
-    if(blinkT>3.1){
+    if(blinkT>3.1 && avatar){
         avatar.scale.y=1;
         blinkT=0;
     }
 }
 
-// 👀 EYE MOVE
-function eyeMove(){
-    avatar.rotation.y += (Math.random()-0.5)*0.002;
-}
-
-// 🎤 SPEECH
+// SPEECH
 let recognition, listening=false;
-let audioCtx, analyser, source, dataArray;
+let audioCtx, analyser, dataArray;
+let lipActive=false;
 
 function initSpeech(){
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -90,7 +118,7 @@ async function send(text){
     speak(data.reply);
 }
 
-// 🔊 SPEAK + REAL LIPSYNC
+// SPEAK
 async function speak(text){
     let res = await fetch("/speak",{
         method:"POST",
@@ -106,14 +134,19 @@ async function speak(text){
     setupLipSync(audio);
 
     audio.onended = ()=>{
+        lipActive=false;
+        if(avatar) avatar.scale.y=1;
         if(listening) recognition.start();
     };
 }
 
-// 👄 REAL LIP SYNC (Audio → Viseme)
+// LIPSYNC FIXED
 function setupLipSync(audio){
-    audioCtx = new AudioContext();
-    source = audioCtx.createMediaElementSource(audio);
+    if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    const source = audioCtx.createMediaElementSource(audio);
     analyser = audioCtx.createAnalyser();
 
     source.connect(analyser);
@@ -122,19 +155,16 @@ function setupLipSync(audio){
     analyser.fftSize = 512;
     dataArray = new Uint8Array(analyser.frequencyBinCount);
 
-    function animateMouth(){
-        analyser.getByteFrequencyData(dataArray);
+    lipActive = true;
 
+    function animateMouth(){
+        if(!lipActive) return;
+
+        analyser.getByteFrequencyData(dataArray);
         let avg = dataArray.reduce((a,b)=>a+b)/dataArray.length;
 
-        // map to mouth open
-        let scale = 1 + (avg/255)*0.1;
-
         if(avatar){
-            avatar.scale.y = scale;
-
-            // smile effect
-            avatar.rotation.x = (avg/255)*0.05;
+            avatar.scale.y = 1 + (avg/255)*0.1;
         }
 
         requestAnimationFrame(animateMouth);
@@ -143,9 +173,13 @@ function setupLipSync(audio){
     animateMouth();
 }
 
-// 🎤 ONE CLICK
+// MIC ONE CLICK
 mic.onclick=()=>{
     if(!recognition) initSpeech();
+
+    if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
 
     if(!listening){
         listening=true;
@@ -153,4 +187,7 @@ mic.onclick=()=>{
         mic.style.background="red";
     }
 };
-        </script>
+</script>
+
+</body>
+</html>
