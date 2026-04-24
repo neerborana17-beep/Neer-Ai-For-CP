@@ -42,7 +42,7 @@ camera.position.set(0,1.5,3);
 let avatar=null, mixer=null;
 let clock = new THREE.Clock();
 
-// LOAD MODEL (OPTIONAL)
+// LOAD MODEL (optional)
 const loader = new THREE.GLTFLoader();
 loader.load("/static/avatar.glb",(gltf)=>{
     avatar = gltf.scene;
@@ -54,7 +54,9 @@ loader.load("/static/avatar.glb",(gltf)=>{
             mixer.clipAction(clip).play();
         });
     }
-}, undefined, ()=>{console.log("No avatar, voice only mode");});
+}, undefined, ()=>{
+    console.log("No avatar → voice only mode");
+});
 
 // LOOP
 function animate(){
@@ -85,24 +87,42 @@ function blink(){
     }
 }
 
-// SPEECH
+// 🎤 SPEECH SYSTEM
 let recognition, listening=false;
 let audioCtx, analyser, dataArray;
 let lipActive=false;
 
+// INIT SPEECH (FIXED)
 function initSpeech(){
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if(!SR){
+        alert("Speech Recognition not supported in your browser");
+        return;
+    }
+
     recognition = new SR();
     recognition.lang="en-IN";
     recognition.continuous=true;
 
+    recognition.onstart = ()=>{
+        console.log("Mic started");
+    };
+
     recognition.onresult = (e)=>{
         let text = e.results[e.results.length-1][0].transcript;
+        console.log("You said:", text);
         send(text);
     };
 
+    recognition.onerror = (e)=>{
+        console.log("Speech error:", e);
+    };
+
     recognition.onend = ()=>{
-        if(listening) recognition.start();
+        if(listening){
+            recognition.start();
+        }
     };
 }
 
@@ -118,7 +138,7 @@ async function send(text){
     speak(data.reply);
 }
 
-// SPEAK
+// 🔊 SPEAK (FIXED)
 async function speak(text){
     let res = await fetch("/speak",{
         method:"POST",
@@ -129,7 +149,12 @@ async function speak(text){
     let data = await res.json();
 
     let audio = new Audio(data.audio);
-    audio.play();
+
+    try{
+        await audio.play();
+    }catch(err){
+        console.log("Audio blocked:", err);
+    }
 
     setupLipSync(audio);
 
@@ -140,7 +165,7 @@ async function speak(text){
     };
 }
 
-// LIPSYNC FIXED
+// 👄 LIP SYNC FIXED
 function setupLipSync(audio){
     if(!audioCtx){
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -173,12 +198,13 @@ function setupLipSync(audio){
     animateMouth();
 }
 
-// MIC ONE CLICK
+// 🎤 MIC CLICK (CRITICAL FIX)
 mic.onclick=()=>{
     if(!recognition) initSpeech();
 
     if(!audioCtx){
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        audioCtx.resume(); // 🔥 REQUIRED
     }
 
     if(!listening){
