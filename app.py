@@ -9,6 +9,8 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 ELEVEN_API_KEY = os.getenv("ELEVENLABS_API_KEY")
 MONGO_URI = os.getenv("MONGO_URI")
 
+VOICE_ID = "mg9npuuaf8WJphS6E0Rt"
+
 chat_col = None
 
 if MONGO_URI:
@@ -16,8 +18,36 @@ if MONGO_URI:
     db = client["zayra_db"]
     chat_col = db["chat"]
 
-# --- AI RESPONSE ---
+# --- EMOTION ---
+def detect_emotion(text):
+    t = text.lower()
+
+    if any(w in t for w in ["miss", "love", "jaan", "pyar"]):
+        return "romantic"
+    if any(w in t for w in ["sad", "alone", "cry"]):
+        return "sad"
+    if any(w in t for w in ["angry", "gussa"]):
+        return "angry"
+    if any(w in t for w in ["haha", "lol"]):
+        return "playful"
+
+    return "neutral"
+
+# --- AI ---
 def get_ai_response(user_input):
+    mood = detect_emotion(user_input)
+
+    system = f"""
+    You are Zayra (cute girlfriend).
+    Mood: {mood}
+    
+    Rules:
+    - Short replies (2–10 words)
+    - Hinglish
+    - Emotional + flirty + real girl tone
+    - Max 1 emoji
+    """
+
     try:
         res = requests.post(
             "https://api.groq.com/openai/v1/chat/completions",
@@ -28,7 +58,7 @@ def get_ai_response(user_input):
             json={
                 "model": "llama-3.3-70b-versatile",
                 "messages": [
-                    {"role": "system", "content": "you are cute girlfriend, short reply, hinglish"},
+                    {"role": "system", "content": system},
                     {"role": "user", "content": user_input}
                 ]
             },
@@ -51,12 +81,15 @@ def get_ai_response(user_input):
         logging.error(e)
         return "server busy 😅"
 
-# --- ELEVENLABS TTS ---
+# --- ELEVENLABS SPEAK ---
 @app.route("/speak", methods=["POST"])
 def speak():
     try:
         data = request.get_json()
         text = data.get("text", "").strip()
+
+        print("🔥 SPEAK ROUTE HIT")
+        print("TEXT:", text)
 
         if not text:
             return jsonify({"error": "empty"}), 400
@@ -66,7 +99,7 @@ def speak():
 
         if not os.path.exists(path):
 
-            url = "https://api.elevenlabs.io/v1/text-to-speech/EXAVITQu4vr4xnSDxMaL"
+            url = f"https://api.elevenlabs.io/v1/text-to-speech/{VOICE_ID}"
 
             headers = {
                 "xi-api-key": ELEVEN_API_KEY,
@@ -77,17 +110,20 @@ def speak():
                 "text": text,
                 "model_id": "eleven_multilingual_v2",
                 "voice_settings": {
-                    "stability": 0.4,
-                    "similarity_boost": 0.8
+                    "stability": 0.25,
+                    "similarity_boost": 0.9
                 }
             }
 
             response = requests.post(url, headers=headers, json=payload)
 
+            print("STATUS:", response.status_code)
+
             if response.status_code == 200:
                 with open(path, "wb") as f:
                     f.write(response.content)
             else:
+                print("ERROR:", response.text)
                 return jsonify({"error": "tts failed"}), 500
 
         return jsonify({"audio": path})
