@@ -1,9 +1,15 @@
-Flask
-pymongo
-pytz
-certifi
-requests
-pinecone
-gunicorn
-apscheduler
-duckduckgo-search
+Flask==3.0.0
+pymongo==4.6.1
+pytz==2024.1
+certifi==2024.2.2
+requests==2.31.0
+pinecone-client==3.0.2
+gunicorn==21.2.0
+apscheduler==3.10.4
+duckduckgo-search==4.4
+
+# 🔊 Voice (Edge TTS)
+edge-tts==6.1.9
+
+# ⚡ Stability
+aiohttp==3.9.3
